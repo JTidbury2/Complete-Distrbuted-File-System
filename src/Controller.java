@@ -19,9 +19,14 @@ public class Controller {
     rebalanceTime = Integer.parseInt(args[3]);
     setUpCPort();
   }
-  public static void setUpDstoreThread(Socket client ){
+  public static void setUpDstoreThread(Socket client,int port ){
     System.out.println("DStoreThread started");
-    new Thread(new DStoreThread(client)).start();
+    new Thread(new DStoreThread(client,port)).start();
+  }
+
+  public static void setUpClientThread (Socket client,String firstCommand){
+    System.out.println("ClientThread started");
+    new Thread(new ClientThread(client,firstCommand)).start();
   }
 
   private static void setUpCPort() {
@@ -40,20 +45,28 @@ public class Controller {
               BufferedReader in = new BufferedReader(
                   new InputStreamReader(client.getInputStream()));
               String line;
+              System.out.println("Connection to unknown accepted");
               while ((line = in.readLine()) != null) {
                 if (line.startsWith("JOIN")) {
                   String[] split = line.split(" ");
                   String dstore = split[1];
                   dstoreList.add(dstore);
                   System.out.println("DStore " + dstore + " joined");
-                  setUpDstoreThread(client) ;
+                  setUpDstoreThread(client,Integer.parseInt(dstore)) ;
                   closeFlag = false;
                   break;
+                } else if ((line.startsWith("LIST") || line.startsWith("STORE")||line.startsWith(
+                    "REMOVE"))) {
+                  System.out.println("Command " + line + " received");
+                  setUpClientThread(client,line);
+                  closeFlag = false;
+
                 }
               }
               if (closeFlag) {
                 client.close();
               }
+              System.out.println("Connection to unknown closed");
 
             } catch (IOException e) {
             }

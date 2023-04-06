@@ -5,8 +5,10 @@ import java.net.Socket;
 
 public class DStoreThread implements Runnable{
   private Socket client;
-  public DStoreThread(Socket client) {
+  int port;
+  public DStoreThread(Socket client,int port) {
     this.client = client;
+    this.port = port;
   }
 
   @Override
