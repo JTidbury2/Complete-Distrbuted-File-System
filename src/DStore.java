@@ -6,6 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class DStore {
+
   static int port = 0;
   static int cport = 0;
   static int timeOut = 0;
@@ -15,7 +16,8 @@ public class DStore {
   static ServerSocket listenerSocket;
   static Socket clientSocket;
   static String[] fileList;
-  public static void main (String[] args) {
+
+  public static void main(String[] args) {
     port = Integer.parseInt(args[0]);
     cport = Integer.parseInt(args[1]);
     timeOut = Integer.parseInt(args[2]);
@@ -33,14 +35,13 @@ public class DStore {
       e.printStackTrace();
     }
     try {
-      clientSocket=listenerSocket.accept();
+      clientSocket = listenerSocket.accept();
       try {
         BufferedReader in = new BufferedReader(
             new InputStreamReader(clientSocket.getInputStream()));
         String line;
         while ((line = in.readLine()) != null) {
           System.out.println(line + " received");
-          //TODO: do something with the message
           handleCommand(line);
         }
         clientSocket.close();
@@ -61,7 +62,10 @@ public class DStore {
       }
       message = message.trim();
       controllerOut.println(message);
+    } else if (line.startsWith("STORE")) {
+
     }
+
   }
 
   public static void connectToController() {
@@ -70,13 +74,10 @@ public class DStore {
       controllerOut = new PrintWriter(controllerSocket.getOutputStream());
       controllerOut.println("JOIN " + port);
       controllerOut.flush();
-      controllerOut.flush();
     } catch (IOException e) {
       e.printStackTrace();
     }
   }
-
-
 
 
 }
