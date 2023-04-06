@@ -20,7 +20,9 @@ public class DStore {
     cport = Integer.parseInt(args[1]);
     timeOut = Integer.parseInt(args[2]);
     String fileFolder = args[3];
+    System.out.println("DStore started");
     connectToController();
+    System.out.println("DStore connected to controller");
     setUpListenerPort();
   }
 
@@ -67,6 +69,8 @@ public class DStore {
       controllerSocket = new Socket("localhost", cport);
       controllerOut = new PrintWriter(controllerSocket.getOutputStream());
       controllerOut.println("JOIN " + port);
+      controllerOut.flush();
+      controllerOut.flush();
     } catch (IOException e) {
       e.printStackTrace();
     }
