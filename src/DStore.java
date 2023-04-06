@@ -13,7 +13,7 @@ public class DStore {
   String fileFolder = "";
   static Socket controllerSocket;
   static PrintWriter controllerOut;
-  static ServerSocket listenerSocket;
+  static ServerSocket ss;
   static Socket clientSocket;
   static String[] fileList;
 
@@ -30,28 +30,57 @@ public class DStore {
 
   private static void setUpListenerPort() {
     try {
-      listenerSocket = new ServerSocket(port);
+      ss = new ServerSocket(cport);
     } catch (IOException e) {
       e.printStackTrace();
     }
-    try {
-      clientSocket = listenerSocket.accept();
+    while (true) {
       try {
-        BufferedReader in = new BufferedReader(
-            new InputStreamReader(clientSocket.getInputStream()));
-        String line;
-        while ((line = in.readLine()) != null) {
-          System.out.println(line + " received");
-          handleCommand(line);
-        }
-        clientSocket.close();
-      } catch (Exception e) {
+        final Socket client = ss.accept();
+        new Thread(new Runnable() {
+          public void run() {
+            try {
+              boolean closeFlag = true;
+              BufferedReader in = new BufferedReader(
+                  new InputStreamReader(client.getInputStream()));
+              String line;
+              System.out.println("Connection to unknown accepted");
+              while ((line = in.readLine()) != null) {
+                if (line.startsWith("LIST")) {
+                  setUpControllerThread(client);
+                  closeFlag = false;
+                  break;
+                } else{
+                  System.out.println("Command " + line + " received");
+                  setUpClientThread(client, line);
+                  closeFlag = false;
+                }
+              }
+              if (closeFlag) {
+                client.close();
+                System.out.println("Connection to unknown closed");
+              }
+            } catch (IOException e) {
+            }
+          }
+        }).start();
+      } catch (IOException e) {
+        e.printStackTrace();
       }
-    } catch (IOException e) {
-      e.printStackTrace();
+
     }
 
 
+  }
+
+  private static void setUpClientThread(Socket client, String line) {
+    System.out.println("ClientThread started");
+    new Thread(new DClientThread(client, line)).start();
+  }
+
+  private static void setUpControllerThread(Socket client) {
+    System.out.println("ControllerThread started");
+    new Thread(new ControllerThread(client,controllerOut)).start();
   }
 
   private static void handleCommand(String line) {
@@ -71,9 +100,8 @@ public class DStore {
   public static void connectToController() {
     try {
       controllerSocket = new Socket("localhost", cport);
-      controllerOut = new PrintWriter(controllerSocket.getOutputStream());
+      controllerOut = new PrintWriter(controllerSocket.getOutputStream(),true);
       controllerOut.println("JOIN " + port);
-      controllerOut.flush();
     } catch (IOException e) {
       e.printStackTrace();
     }
