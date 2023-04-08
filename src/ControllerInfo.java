@@ -12,6 +12,10 @@ public class ControllerInfo {
   private ArrayList<String> fileList = new ArrayList<String>();
   private HashMap <String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
   private HashMap <String, String> fileIndex = new HashMap<String, String>();
+  private ArrayList <Integer> storeAcks = new ArrayList<Integer>();
+
+
+  private Object storeLock = new Object();
 
   public int getCport() {
     return cport;
@@ -100,5 +104,31 @@ public class ControllerInfo {
     message.trim();
     return message;
 
+  }
+
+  public void storeAck (int dstore, String file) {
+    storeAcks.add(dstore);
+    if (storeAcks.size() == dstoreList.size()) {
+      storeAcks.clear();
+      setFileIndex(file, "SC");
+      fileList.add(file);
+      storeComplete();
+    }
+  }
+
+  public void storeComplete (){
+    synchronized (storeLock) {
+      storeLock.notify();
+    }
+  }
+
+  public void storeWait() {
+    synchronized (storeLock) {
+      try {
+        storeLock.wait();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
   }
 }

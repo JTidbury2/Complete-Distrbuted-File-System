@@ -40,6 +40,8 @@ public class ClientThread implements Runnable {
       e.printStackTrace();
     }
     out.println(message);
+    info.storeWait();
+    out.println("STORE_COMPLETE");
     System.out.println("Client thread returned"+message);
   }
 

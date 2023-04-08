@@ -16,6 +16,15 @@ public class DStoreThread implements Runnable {
   }
 
   private void handleCommand(String line) {
+    if (line.startsWith("STORE_ACK")) {
+      storeAckCommand(line);
+    }
+
+  }
+
+  private void storeAckCommand(String line) {
+    String fileName = line.split(" ")[1];
+
 
   }
 

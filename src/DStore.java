@@ -16,7 +16,7 @@ public class DStore {
   static ServerSocket ss;
   static Socket clientSocket;
   static String[] fileList;
-
+  static DStoreInfo info;
   public static void main(String[] args) {
     port = Integer.parseInt(args[0]);
     cport = Integer.parseInt(args[1]);
@@ -75,12 +75,12 @@ public class DStore {
 
   private static void setUpClientThread(Socket client, String line) {
     System.out.println("ClientThread started");
-    new Thread(new DClientThread(client, line)).start();
+    new Thread(new DClientThread(client, line,info)).start();
   }
 
   private static void setUpControllerThread(Socket client) {
     System.out.println("ControllerThread started");
-    new Thread(new ControllerThread(client,controllerOut)).start();
+    new Thread(new ControllerThread(client,info)).start();
   }
 
   private static void handleCommand(String line) {
