@@ -12,7 +12,7 @@ public class ControllerInfo {
   private ArrayList<String> fileList = new ArrayList<String>();
   private HashMap <String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
   private HashMap <String, String> fileIndex = new HashMap<String, String>();
-  private ArrayList <Integer> storeAcks = new ArrayList<Integer>();
+  private ArrayList <String> storeAcks = new ArrayList<String>();
 
 
   private Object storeLock = new Object();
@@ -106,9 +106,12 @@ public class ControllerInfo {
 
   }
 
-  public void storeAck (int dstore, String file) {
-    storeAcks.add(dstore);
+  public void storeAck (String file) {
+    storeAcks.add(file);
+    System.out.println("Store acks: " + storeAcks.size());
+    System.out.println("Dstore list: " + dstoreList.size());
     if (storeAcks.size() == dstoreList.size()) {
+      System.out.println("Store complete");
       storeAcks.clear();
       setFileIndex(file, "SC");
       fileList.add(file);

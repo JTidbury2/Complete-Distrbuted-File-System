@@ -61,6 +61,7 @@ public class Controller {
                   String dstore = split[1];
                   dstoreList.add(dstore);
                   System.out.println("DStore " + dstore + " joined");
+                  info.addDstore(Integer.parseInt(dstore));
                   setUpDstoreThread(client, Integer.parseInt(dstore));
                   closeFlag = false;
                   break;
@@ -69,6 +70,7 @@ public class Controller {
                   System.out.println("Command " + line + " received");
                   setUpClientThread(client, line);
                   closeFlag = false;
+                  break;
                 }
               }
               if (closeFlag) {

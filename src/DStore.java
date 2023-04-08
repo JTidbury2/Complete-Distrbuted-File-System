@@ -16,7 +16,7 @@ public class DStore {
   static ServerSocket ss;
   static Socket clientSocket;
   static String[] fileList;
-  static DStoreInfo info;
+  static DStoreInfo info= new DStoreInfo();
   public static void main(String[] args) {
     port = Integer.parseInt(args[0]);
     cport = Integer.parseInt(args[1]);
@@ -30,7 +30,7 @@ public class DStore {
 
   private static void setUpListenerPort() {
     try {
-      ss = new ServerSocket(cport);
+      ss = new ServerSocket(port);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -47,13 +47,14 @@ public class DStore {
               System.out.println("Connection to unknown accepted");
               while ((line = in.readLine()) != null) {
                 if (line.startsWith("LIST")) {
-                  setUpControllerThread(client);
+                  setUpControllerThread(controllerSocket);
                   closeFlag = false;
                   break;
                 } else{
                   System.out.println("Command " + line + " received");
                   setUpClientThread(client, line);
                   closeFlag = false;
+                  break;
                 }
               }
               if (closeFlag) {

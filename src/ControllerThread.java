@@ -9,9 +9,9 @@ Socket controller;
 DStoreInfo info;
 PrintWriter out = null;
 BufferedReader in = null;
-  public ControllerThread(Socket controller, DStoreInfo info) {
+  public ControllerThread(Socket controller, DStoreInfo infos) {
   this.controller = controller;
-  this.info = info;
+  info = infos;
   }
 
   @Override
@@ -24,11 +24,11 @@ BufferedReader in = null;
       new Thread(new Runnable() {
         @Override
         public void run() {
-          while (info.storeFlag)
             info.storeControllerMessage();
+            System.out.println("STORE_ACK " + info.storeMessage);
             out.println("STORE_ACK " + info.storeMessage);
         }
-      });
+      }).start();
       System.out.println("ClientThread started 2");
       while ((line = in.readLine()) != null) {
         System.out.println("Client thread recieved" + line);

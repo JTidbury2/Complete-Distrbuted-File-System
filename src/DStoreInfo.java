@@ -6,8 +6,10 @@ String storeMessage = null;
 
 public void storeControllerMessage(){
   synchronized(storeLock) {
+    System.out.println("Stoore message wait");
     try {
       storeLock.wait();
+      System.out.println("Stoore message wait done");
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
@@ -16,7 +18,8 @@ public void storeControllerMessage(){
 
 public void storeControllerMessageGo(String message){
   synchronized(storeLock) {
+    System.out.println("Stoore message done");
     storeMessage = message;
-    storeLock.notify();
+    storeLock.notifyAll();
   }
 }}

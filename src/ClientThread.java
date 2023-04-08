@@ -14,10 +14,10 @@ public class ClientThread implements Runnable {
   PrintWriter out = null;
   BufferedReader in = null;
 
-  public ClientThread(Socket client, String firstCommand, ControllerInfo info) {
+  public ClientThread(Socket client, String firstCommand, ControllerInfo infos) {
     this.client = client;
     this.firstCommand = firstCommand;
-    this.info = info;
+    info = infos;
   }
 
   private void handleCommand(String line) {
@@ -35,14 +35,17 @@ public class ClientThread implements Runnable {
     try {
       message = info.storeTo(s);
     } catch (NotEnoughDstoresException e) {
+      out.println("ERROR_NOT_ENOUGH_DSTORES");
       e.printStackTrace();
     } catch (FileAlreadyExistsException e) {
+      out.println("ERROR_FILE_ALREADY_EXISTS");
       e.printStackTrace();
     }
     out.println(message);
+    System.out.println("Client thread returned "+message);
     info.storeWait();
     out.println("STORE_COMPLETE");
-    System.out.println("Client thread returned"+message);
+
   }
 
   private void listCommand() {

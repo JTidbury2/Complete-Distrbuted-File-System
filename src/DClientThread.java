@@ -16,10 +16,10 @@ public class DClientThread implements Runnable {
   InputStream inStream = null;
   DStoreInfo info;
 
-  public DClientThread(Socket client, String line, DStoreInfo info) {
+  public DClientThread(Socket client, String line, DStoreInfo infos) {
     this.client = client;
     this.firstCommand = line;
-    this.info = info;
+    info = infos;
   }
 
   @Override
@@ -52,6 +52,7 @@ public class DClientThread implements Runnable {
   }
 
   private void storeCommand(String filename, String filesize) {
+    out.println("ACK");
     int size = Integer.parseInt(filesize);
     byte[] content = new byte[size];
     try {
