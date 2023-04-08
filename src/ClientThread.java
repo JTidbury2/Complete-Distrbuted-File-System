@@ -8,76 +8,75 @@ import java.nio.file.FileAlreadyExistsException;
 
 public class ClientThread implements Runnable {
 
-  Socket client;
-  String firstCommand;
-  ControllerInfo info;
-  PrintWriter out = null;
-  BufferedReader in = null;
+    Socket client;
+    String firstCommand;
+    ControllerInfo info;
+    PrintWriter out = null;
+    BufferedReader in = null;
 
-  public ClientThread(Socket client, String firstCommand, ControllerInfo infos) {
-    this.client = client;
-    this.firstCommand = firstCommand;
-    info = infos;
-  }
-
-  private void handleCommand(String line) {
-    if (line.startsWith("LIST")) {
-      listCommand();
-    }else if (line.startsWith("STORE")){
-      String[] input= line.split(" ");
-      storeCommand(input[1],input[2]);
+    public ClientThread(Socket client, String firstCommand, ControllerInfo infos) {
+        this.client = client;
+        this.firstCommand = firstCommand;
+        info = infos;
     }
-  }
 
-  private void storeCommand(String s, String s1) {
-    info.setFileIndex(s,"SIP");
-    String message = null;
-    try {
-      message = info.storeTo(s);
-    } catch (NotEnoughDstoresException e) {
-      out.println("ERROR_NOT_ENOUGH_DSTORES");
-      e.printStackTrace();
-    } catch (FileAlreadyExistsException e) {
-      out.println("ERROR_FILE_ALREADY_EXISTS");
-      e.printStackTrace();
+    private void handleCommand(String line) {
+        if (line.startsWith("LIST")) {
+            listCommand();
+        } else if (line.startsWith("STORE")) {
+            String[] input = line.split(" ");
+            storeCommand(input[1], input[2]);
+        }
     }
-    out.println(message);
-    System.out.println("Client thread returned "+message);
-    info.storeWait();
-    out.println("STORE_COMPLETE");
 
-  }
-
-  private void listCommand() {
-
-    String message = null;
-    try {
-      message = info.list();
-    } catch (NotEnoughDstoresException e) {
-      message ="ERROR_NOT_ENOUGH_DSTORES";
+    private void storeCommand(String s, String s1) {
+        info.setFileIndex(s, Index.STORE_IN_PROGRESS);
+        String message = null;
+        try {
+            message = info.storeTo(s);
+        } catch (NotEnoughDstoresException e) {
+            message = "ERROR_NOT_ENOUGH_DSTORES";
+        } catch (FileAlreadyExistsException e) {
+            message = "ERROR_FILE_ALREADY_EXISTS";
+        }
+        out.println(message);
+        System.out.println("Client thread " + client.getPort() + " returned " + message);
+        info.storeWait();
+        out.println("STORE_COMPLETE");
+        System.out.println("Client thread " + client.getPort() + " returned STORE_COMPLETE");
     }
-    out.println(message);
-    System.out.println("Client thread returned"+message);
-  }
 
-  @Override
-  public void run() {
-
-    try {
-      out = new PrintWriter(client.getOutputStream(), true);
-      in = new BufferedReader(
-          new InputStreamReader(client.getInputStream()));
-          handleCommand(firstCommand);
-      String line;
-      System.out.println("ClientThread started 2");
-      while ((line = in.readLine()) != null) {
-        System.out.println("Client thread recieved"+line);
-        handleCommand(line);
-      }
-      client.close();
-      System.out.println("ClientThread connection closed");
-    } catch (IOException e) {
-      e.printStackTrace();
+    private void listCommand() {
+        String message = null;
+        try {
+            message = info.list();
+        } catch (NotEnoughDstoresException e) {
+            message = "ERROR_NOT_ENOUGH_DSTORES";
+        }
+        out.println(message);
+        System.out.println("Client thread returned" + message);
     }
-  }
+
+    @Override
+    public void run() {
+
+        try {
+            out = new PrintWriter(client.getOutputStream(), true);
+            in = new BufferedReader(
+                new InputStreamReader(client.getInputStream()));
+
+            handleCommand(firstCommand);
+
+            String line;
+
+            while ((line = in.readLine()) != null) {
+                System.out.println("ClientThread" + client.getPort() + "received" + line);
+                handleCommand(line);
+            }
+            client.close();
+            System.out.println("ClientThread " + client.getPort() + " connection closed");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

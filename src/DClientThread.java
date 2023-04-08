@@ -9,77 +9,79 @@ import java.net.Socket;
 
 public class DClientThread implements Runnable {
 
-  Socket client;
-  String firstCommand;
-  PrintWriter out = null;
-  BufferedReader in = null;
-  InputStream inStream = null;
-  DStoreInfo info;
+    Socket client;
+    String firstCommand;
+    PrintWriter out = null;
+    BufferedReader in = null;
+    InputStream inStream = null;
+    DStoreInfo info;
 
-  public DClientThread(Socket client, String line, DStoreInfo infos) {
-    this.client = client;
-    this.firstCommand = line;
-    info = infos;
-  }
-
-  @Override
-  public void run() {
-    try {
-      out = new PrintWriter(client.getOutputStream(), true);
-      in = new BufferedReader(
-          new InputStreamReader(client.getInputStream()));
-      inStream = client.getInputStream();
-      handleCommand(firstCommand);
-      String line;
-      System.out.println("ClientThread started 2");
-      while ((line = in.readLine()) != null) {
-        System.out.println("Client thread recieved" + line);
-        handleCommand(line);
-      }
-      client.close();
-      System.out.println("ClientThread connection closed");
-    } catch (IOException e) {
-      e.printStackTrace();
+    public DClientThread(Socket client, String line, DStoreInfo infos) {
+        this.client = client;
+        this.firstCommand = line;
+        info = infos;
     }
 
-  }
+    @Override
+    public void run() {
+        try {
+            out = new PrintWriter(client.getOutputStream(), true);
+            in = new BufferedReader(
+                new InputStreamReader(client.getInputStream()));
+            inStream = client.getInputStream();
 
-  private void handleCommand(String line) {
-    if (line.startsWith("STORE")) {
-      String[] input = line.split(" ");
-      storeCommand(input[1], input[2]);
+            handleCommand(firstCommand);
+
+            String line;
+            while ((line = in.readLine()) != null) {
+                System.out.println("DClient thread " + client.getPort() + " received :" + line);
+                handleCommand(line);
+            }
+            client.close();
+            System.out.println("ClientThread connection closed");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
-  }
 
-  private void storeCommand(String filename, String filesize) {
-    out.println("ACK");
-    int size = Integer.parseInt(filesize);
-    byte[] content = new byte[size];
-    try {
-      inStream.readNBytes(content, 0, size);
-    } catch (IOException e) {
-      e.printStackTrace();
+    private void handleCommand(String line) {
+        if (line.startsWith("STORE")) {
+            String[] input = line.split(" ");
+            storeCommand(input[1], input[2]);
+        }
     }
-    System.out.println("File recieved");
-    File outFile = new File(filename);
-    try {
-      outFile.createNewFile();
-    } catch (IOException e) {
-      e.printStackTrace();
+
+    private void storeCommand(String filename, String filesize) {
+        out.println("ACK");
+        System.out.println("DClient thread " + client.getPort() + " ACK sent");
+
+        int size = Integer.parseInt(filesize);
+        byte[] content = new byte[size];
+        try {
+            inStream.readNBytes(content, 0, size);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("DClient thread " + client.getPort() + " File received");
+
+        File outFile = new File(filename);
+        try {
+            outFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            FileOutputStream fileOut = new FileOutputStream(outFile);
+            fileOut.write(content);
+            fileOut.close();
+            System.out.println("DClient thread " + client.getPort() + " File Created");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // TODO add file folder funcitonality
+        info.storeControllerMessageGo(filename);
     }
-    System.out.println("File created");
-    try {
-      FileOutputStream fileOut = new FileOutputStream(outFile);
-      fileOut.write(content);
-      fileOut.close();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    // TODO add file folder funcitonality
-    info.storeControllerMessageGo(filename);
-
-
-
-
-  }
 }
