@@ -26,6 +26,24 @@ public class ClientThread implements Runnable {
         } else if (line.startsWith("STORE")) {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
+        } else if (line.startsWith("LOAD")){
+            String[] input = line.split(" ");
+            loadCommand(input[1],1);
+        }
+    }
+
+    private void loadCommand(String s,int times) {
+        try {
+            int[] fileInfo = info.getFileDStores(s,times);
+            int port = fileInfo[0];
+            int filesize = fileInfo[1];
+            String message = "LOAD_FROM " + port+" "+filesize;
+        } catch (NotEnoughDstoresException e) {
+            throw new RuntimeException(e);
+        } catch (FileDoesNotExistException e) {
+            throw new RuntimeException(e);
+        } catch (DStoreCantRecieveException e) {
+            throw new RuntimeException(e);
         }
     }
 

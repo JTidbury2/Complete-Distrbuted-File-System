@@ -16,12 +16,15 @@ public class ControllerInfo {
   private HashMap <String,ArrayList<Integer>> storeAcks = new HashMap<String, ArrayList<Integer>>();
   private Object storeLock = new Object();
 
+  private HashMap <String, Integer> fileSizeMap = new HashMap<String, Integer>();
+
 
   public Integer[] getStoreDStores(){
     Integer[] dstores = new Integer[repFactor];
     dstores = dstoreList.subList(0,repFactor).toArray(dstores);
     return dstores;
   }
+
 
   public String list() throws NotEnoughDstoresException {
     if (dstoreList.size() < repFactor) {
@@ -137,4 +140,22 @@ public class ControllerInfo {
   public void setCport(int cport) {
     this.cport = cport;
   }
-}
+
+  public int[] getFileDStores(String s,int times)
+      throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
+    if (!fileDstoreMap.containsKey(s)) {
+      throw new FileDoesNotExistException(s);
+    } else if (dstoreList.size()<repFactor) {
+      throw new NotEnoughDstoresException();
+    } else if (fileDstoreMap.get(s).size() < times) {
+      throw new DStoreCantRecieveException();
+    }
+    int[] result = new int[2];
+    result[0] = fileDstoreMap.get(s).get(times);
+    result[1] = fileSizeMap.get(s);
+    return result;
+
+  }
+
+  }
+

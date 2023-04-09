@@ -1,5 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,7 +51,29 @@ public class DClientThread implements Runnable {
         if (line.startsWith("STORE")) {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
+        }else if (line.startsWith("LOAD_DATA")) {
+            String input = line.split(" ")[1];
+            loadData(input);
         }
+    }
+
+    private void loadData(String fileName) {
+        File outFile = new File(fileName);
+        try {
+            FileInputStream fileIn = new FileInputStream(outFile);
+            byte[] content = new byte[(int) outFile.length()];
+            int buflen ;
+            while ((buflen = fileIn.read(content)) != -1){
+                out.write(buflen);
+            }
+
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
 
     private void storeCommand(String filename, String filesize) {
