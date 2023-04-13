@@ -115,6 +115,6 @@ public class ClientThread implements Runnable {
                 out.println("REMOVE_COMPLETE");
                 System.out.println("REMOVE_COMPLETE");
             }
-        }).start();
+        },"Remove Ack Thread").start();
     }
 }

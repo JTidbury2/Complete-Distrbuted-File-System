@@ -89,12 +89,12 @@ public class DStore {
 
     private static void setUpClientThread(Socket client, String line) {
         System.out.println("ClientThread "+client.getPort()+" started");
-        new Thread(new DClientThread(client, line, info)).start();
+        new Thread(new DClientThread(client, line, info),"Client Thread "+client.getPort()).start();
     }
 
     private static void setUpControllerThread(Socket client) {
         System.out.println("ControllerThread "+client.getPort()+" started");
-        new Thread(new ControllerThread(client, info)).start();
+        new Thread(new ControllerThread(client, info),"Controller Thread "+client.getPort()).start();
     }
 
 

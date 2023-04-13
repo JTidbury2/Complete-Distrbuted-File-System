@@ -70,6 +70,6 @@ public class DStoreThread implements Runnable {
                 out.println("REMOVE " + info.getRemoveFile());
                 System.out.println("REMOVE " + info.getRemoveFile());
             }
-        }).start();
+        },"Remove Start Watcher Thread").start();
     }
 }

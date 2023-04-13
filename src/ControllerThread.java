@@ -60,11 +60,14 @@ public class ControllerThread implements Runnable {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("STORE_ACK watcher started");
-                info.storeControllerMessage();
-                out.println("STORE_ACK " + info.storeMessage);
-                System.out.println("STORE_ACK " + info.storeMessage);
+
+                while (info.storeFlag) {
+                    System.out.println("STORE_ACK watcher started");
+                    info.storeControllerMessage();
+                    out.println("STORE_ACK " + info.storeMessage);
+                    System.out.println("STORE_ACK " + info.storeMessage);
+                }
             }
-        }).start();
+        },"STORE_ACK Thread").start();
     }
 }
