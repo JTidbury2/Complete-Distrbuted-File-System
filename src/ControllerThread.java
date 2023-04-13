@@ -8,12 +8,15 @@ import java.net.Socket;
 public class ControllerThread implements Runnable {
 
     Socket controller;
+
+    Socket dstoreIn;
     DStoreInfo info;
     PrintWriter out = null;
     BufferedReader in = null;
 
-    public ControllerThread(Socket controller, DStoreInfo infos) {
+    public ControllerThread(Socket controller,Socket dstoreIn, DStoreInfo infos) {
         this.controller = controller;
+        this.dstoreIn = dstoreIn;
         info = infos;
     }
 
@@ -22,10 +25,11 @@ public class ControllerThread implements Runnable {
         try {
             out = new PrintWriter(controller.getOutputStream(), true);
             in = new BufferedReader(
-                new InputStreamReader(controller.getInputStream()));
+                new InputStreamReader(dstoreIn.getInputStream()));
             startThreadWaiters();
 
             String line;
+            System.out.println("Controller thread " + controller.getPort()+" started");
             while ((line = in.readLine()) != null) {
                 System.out.println("Controller thread " + line);
                 handleCommand(line);
@@ -39,7 +43,9 @@ public class ControllerThread implements Runnable {
     }
 
     private void handleCommand(String line) {
+        System.out.println("***********Controller thread recieved " + line);
         if (line.startsWith("REMOVE")) {
+            System.out.println("Controller thread recieved " + line);
             String[] input = line.split(" ");
             removeFile(input[1]);
         }

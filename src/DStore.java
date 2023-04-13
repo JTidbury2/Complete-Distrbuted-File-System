@@ -59,7 +59,7 @@ public class DStore {
 
                             while ((line = in.readLine()) != null) {
                                 if (line.startsWith("LIST")) {
-                                    setUpControllerThread(controllerSocket);
+                                    setUpControllerThread(controllerSocket,client);
                                     System.out.println("Controller thread started");
                                     closeFlag = false;
                                     break;
@@ -92,9 +92,10 @@ public class DStore {
         new Thread(new DClientThread(client, line, info),"Client Thread "+client.getPort()).start();
     }
 
-    private static void setUpControllerThread(Socket client) {
+    private static void setUpControllerThread(Socket client, Socket client2) {
         System.out.println("ControllerThread "+client.getPort()+" started");
-        new Thread(new ControllerThread(client, info),"Controller Thread "+client.getPort()).start();
+        new Thread(new ControllerThread(client,client2, info),
+            "Controller Thread "+client.getPort()).start();
     }
 
 

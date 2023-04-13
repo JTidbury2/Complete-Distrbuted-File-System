@@ -66,11 +66,14 @@ public class DStoreThread implements Runnable {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("Remove watcher started");
-                info.removeWait();
-                out.println("REMOVE " + info.getRemoveFile());
-                System.out.println("REMOVE " + info.getRemoveFile());
+                while (info.getRemoveFlag()) {
+                    System.out.println("Remove watcher started");
+                    info.removeWait();
+
+                    out.println("REMOVE " + info.getRemoveFile());
+                    System.out.println("REMOVE " + info.getRemoveFile());
+                }
             }
-        },"Remove Start Watcher Thread").start();
+        }, "Remove Start Watcher Thread").start();
     }
 }

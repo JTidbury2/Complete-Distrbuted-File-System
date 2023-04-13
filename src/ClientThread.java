@@ -26,10 +26,10 @@ public class ClientThread implements Runnable {
         } else if (line.startsWith("STORE")) {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
-        } else if (line.startsWith("LOAD")){
+        } else if (line.startsWith("LOAD")) {
             String[] input = line.split(" ");
-            loadCommand(input[1],1);
-        } else if (line.startsWith("REMOVE")){
+            loadCommand(input[1], 1);
+        } else if (line.startsWith("REMOVE")) {
             String[] input = line.split(" ");
             removeCommand(input[1]);
         }
@@ -37,9 +37,9 @@ public class ClientThread implements Runnable {
 
     private void removeCommand(String fileName) {
         info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
+        System.out.println("Client thread " + client.getPort() + " received REMOVE " + fileName);
         info.removeStart(fileName);
     }
-
 
 
     private void storeCommand(String s, String s1) {
@@ -59,12 +59,13 @@ public class ClientThread implements Runnable {
         out.println("STORE_COMPLETE");
         System.out.println("Client thread " + client.getPort() + " returned STORE_COMPLETE");
     }
-    private void loadCommand(String s,int times) {
+
+    private void loadCommand(String s, int times) {
         try {
-            int[] fileInfo = info.getFileDStores(s,times);
+            int[] fileInfo = info.getFileDStores(s, times);
             int port = fileInfo[0];
             int filesize = fileInfo[1];
-            String message = "LOAD_FROM " + port+" "+filesize;
+            String message = "LOAD_FROM " + port + " " + filesize;
             out.println(message);
         } catch (NotEnoughDstoresException e) {
             throw new RuntimeException(e);
@@ -74,6 +75,7 @@ public class ClientThread implements Runnable {
             throw new RuntimeException(e);
         }
     }
+
     private void listCommand() {
         String message = null;
         try {
@@ -112,11 +114,13 @@ public class ClientThread implements Runnable {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("Remove ack watcher started");
-                info.removeAckWait();
-                out.println("REMOVE_COMPLETE");
-                System.out.println("REMOVE_COMPLETE");
+                while (info.getRemoveAckFlag()) {
+                    System.out.println("Remove ack watcher started");
+                    info.removeAckWait();
+                    out.println("REMOVE_COMPLETE");
+                    System.out.println("REMOVE_COMPLETE");
+                }
             }
-        },"Remove Ack Thread").start();
+        }, "Remove Ack Thread").start();
     }
 }
