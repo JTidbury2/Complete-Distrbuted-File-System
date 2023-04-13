@@ -6,13 +6,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Arrays;
 
 public class DClientThread implements Runnable {
 
     Socket client;
     String firstCommand;
+
+    OutputStream fileOut = null;
     PrintWriter out = null;
     BufferedReader in = null;
     InputStream inStream = null;
@@ -30,7 +34,9 @@ public class DClientThread implements Runnable {
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
+            fileOut = client.getOutputStream();
             inStream = client.getInputStream();
+            System.out.println("DClient thread " + client.getPort() + " received :" + firstCommand);
 
             handleCommand(firstCommand);
 
@@ -58,14 +64,20 @@ public class DClientThread implements Runnable {
     }
 
     private void loadData(String fileName) {
-        File outFile = new File(fileName);
+        System.out.println("DClient thread " + client.getPort() + " LOAD_DATA "+ fileName+" received");
+
+
         try {
-            FileInputStream fileIn = new FileInputStream(outFile);
-            byte[] content = new byte[(int) outFile.length()];
-            int buflen ;
-            while ((buflen = fileIn.read(content)) != -1){
-                out.write(buflen);
+            File inputFile = new File(fileName);
+            FileInputStream inf = new FileInputStream(inputFile);
+            byte[] buf = new byte[1024];
+            int buflen;
+            while ((buflen=inf.read(buf)) != -1){
+                System.out.print("*");
+                fileOut.write(buf,0,buflen);
             }
+            inf.close();
+            System.out.println("DClient thread " + client.getPort() + " File sent");
 
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);

@@ -27,6 +27,20 @@ public class ControllerInfo {
 
   private HashMap <String, Integer> fileSizeMap = new HashMap<String, Integer>();
 
+  public void updateFileDstores(String fileName, Integer dstore) {
+    if (fileDstoreMap.containsKey(fileName)) {
+      fileDstoreMap.get(fileName).add(dstore);
+    } else {
+      ArrayList<Integer> dstores = new ArrayList<Integer>();
+      dstores.add(dstore);
+      fileDstoreMap.put(fileName, dstores);
+    }
+  }
+
+  public void updateFileSize(String fileName, Integer size) {
+    fileSizeMap.put(fileName, size);
+  }
+
 
   public Integer[] getStoreDStores(){
     Integer[] dstores = new Integer[repFactor];
@@ -206,13 +220,16 @@ public class ControllerInfo {
 
   public int[] getFileDStores(String s,int times)
       throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
+    System.out.println(fileDstoreMap);
+    times=times-1;
     if (!fileDstoreMap.containsKey(s)) {
       throw new FileDoesNotExistException();
     } else if (dstoreList.size()<repFactor) {
       throw new NotEnoughDstoresException();
-    } else if (fileDstoreMap.get(s).size() < times) {
+    } else if (fileDstoreMap.get(s).size() == times) {
       throw new DStoreCantRecieveException();
     }
+    System.out.println("File: " + s + " Dstores: " + fileDstoreMap.get(s).get(times));
     int[] result = new int[2];
     result[0] = fileDstoreMap.get(s).get(times);
     result[1] = fileSizeMap.get(s);

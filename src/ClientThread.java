@@ -44,6 +44,7 @@ public class ClientThread implements Runnable {
 
     private void storeCommand(String s, String s1) {
         info.setFileIndex(s, Index.STORE_IN_PROGRESS);
+        info.updateFileSize(s, Integer.parseInt(s1));
         String message = null;
         try {
             message = info.storeTo(s);
@@ -64,6 +65,7 @@ public class ClientThread implements Runnable {
             int port = fileInfo[0];
             int filesize = fileInfo[1];
             String message = "LOAD_FROM " + port+" "+filesize;
+            out.println(message);
         } catch (NotEnoughDstoresException e) {
             throw new RuntimeException(e);
         } catch (FileDoesNotExistException e) {

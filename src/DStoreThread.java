@@ -30,6 +30,7 @@ public class DStoreThread implements Runnable {
 
     private void storeAckCommand(String line) {
         String fileName = line.split(" ")[1];
+        info.updateFileDstores(fileName, port);
         info.storeAck(fileName);
     }
 
