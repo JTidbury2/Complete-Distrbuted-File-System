@@ -53,7 +53,7 @@ public class DClientThread implements Runnable {
 
     }
 
-    private void handleCommand(String line) {
+    private void handleCommand(String line) throws IOException {
         if (line.startsWith("STORE")) {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
@@ -63,8 +63,12 @@ public class DClientThread implements Runnable {
         }
     }
 
-    private void loadData(String fileName) {
+    private void loadData(String fileName) throws IOException {
         System.out.println("DClient thread " + client.getPort() + " LOAD_DATA "+ fileName+" received");
+        if (!info.checkFileExist(fileName)) {
+            client.close();
+            return;
+        }
 
 
         try {

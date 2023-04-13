@@ -26,9 +26,9 @@ public class ClientThread implements Runnable {
         } else if (line.startsWith("STORE")) {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
-        } else if (line.startsWith("LOAD")) {
+        } else if (line.startsWith("RELOAD")||line.startsWith("LOAD")) {
             String[] input = line.split(" ");
-            loadCommand(input[1], 1);
+            loadCommand(input[1], info.getFileLoadTimes(input[1]));
         } else if (line.startsWith("REMOVE")) {
             String[] input = line.split(" ");
             removeCommand(input[1]);
@@ -36,18 +36,31 @@ public class ClientThread implements Runnable {
     }
 
     private void removeCommand(String fileName) {
-        if (info.checkFile(fileName)) {
-            info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
-            System.out.println(
-                "Client thread " + client.getPort() + " received REMOVE " + fileName);
-            info.removeStart(fileName);
-        } else {
+        if (info.getFileIndex(fileName) == Index.REMOVE_IN_PROGRESS||info.getFileIndex(fileName) == Index.STORE_IN_PROGRESS) {
             out.println("ERROR_FILE_DOES_NOT_EXIST");
+            return;
+        }
+        try {
+            if (info.checkFile(fileName)) {
+                info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
+                System.out.println(
+                    "Client thread " + client.getPort() + " received REMOVE " + fileName);
+                info.removeStart(fileName);
+            } else {
+                out.println("ERROR_FILE_DOES_NOT_EXIST");
+            }
+        } catch (NotEnoughDstoresException e) {
+            out.println("ERROR_NOT_ENOUGH_DSTORES");
+
         }
     }
 
 
     private void storeCommand(String s, String s1) {
+        if (info.getFileIndex(s)== Index.REMOVE_IN_PROGRESS||info.getFileIndex(s) == Index.STORE_IN_PROGRESS) {
+            out.println("ERROR_FILE_ALREADY_EXISTS");
+            return;
+        }
         info.setFileIndex(s, Index.STORE_IN_PROGRESS);
         info.updateFileSize(s, Integer.parseInt(s1));
         String message = null;
@@ -66,6 +79,10 @@ public class ClientThread implements Runnable {
     }
 
     private void loadCommand(String s, int times) {
+        if (info.getFileIndex(s) == Index.REMOVE_IN_PROGRESS||info.getFileIndex(s) == Index.STORE_IN_PROGRESS) {
+            out.println("ERROR_FILE_DOES_NOT_EXIST");
+            return;
+        }
         try {
             int[] fileInfo = info.getFileDStores(s, times);
             int port = fileInfo[0];
@@ -73,11 +90,11 @@ public class ClientThread implements Runnable {
             String message = "LOAD_FROM " + port + " " + filesize;
             out.println(message);
         } catch (NotEnoughDstoresException e) {
-            throw new RuntimeException(e);
+            out.println("ERROR_NOT_ENOUGH_DSTORES");
         } catch (FileDoesNotExistException e) {
-            throw new RuntimeException(e);
+            out.print("ERROR_FILE_DOES_NOT_EXIST");
         } catch (DStoreCantRecieveException e) {
-            throw new RuntimeException(e);
+            out.println("ERROR_LOAD");
         }
     }
 

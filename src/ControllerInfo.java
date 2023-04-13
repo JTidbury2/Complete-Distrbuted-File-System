@@ -14,9 +14,11 @@ public class ControllerInfo {
     private HashMap<String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
     private HashMap<String, Index> fileIndex = new HashMap<String, Index>();
     private HashMap<String, ArrayList<Integer>> storeAcks = new HashMap<String, ArrayList<Integer>>();
-
+    private HashMap<String, Integer> fileSizeMap = new HashMap<String, Integer>();
     private HashMap<String, ArrayList<Integer>> removeAcks = new HashMap<String,
         ArrayList<Integer>>();
+
+    private HashMap<String, Integer> fileLoadCount = new HashMap<String, Integer>();
     private Object storeLock = new Object();
 
     private Object removeLock = new Object();
@@ -29,10 +31,13 @@ public class ControllerInfo {
 
     boolean removeFlag = true;
 
-    private HashMap<String, Integer> fileSizeMap = new HashMap<String, Integer>();
 
-    public boolean checkFile (String fileName) {
-        return fileList.contains(fileName);
+
+    public boolean checkFile (String fileName) throws NotEnoughDstoresException {
+        if (dstoreList.size() < repFactor) {
+            throw new NotEnoughDstoresException();
+        }
+        return fileIndex.containsKey(fileName);
     }
 
     public boolean getRemoveAckFlag() {
@@ -249,7 +254,7 @@ public class ControllerInfo {
         throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
         System.out.println(fileDstoreMap);
         times = times - 1;
-        if (!fileDstoreMap.containsKey(s)) {
+        if (!fileIndex.containsKey(s)) {
             throw new FileDoesNotExistException();
         } else if (dstoreList.size() < repFactor) {
             throw new NotEnoughDstoresException();
@@ -261,7 +266,11 @@ public class ControllerInfo {
         result[0] = fileDstoreMap.get(s).get(times);
         result[1] = fileSizeMap.get(s);
         return result;
+    }
 
+    public int getFileLoadTimes (String s) {
+        fileLoadCount.put(s, fileLoadCount.getOrDefault(s, 0) + 1);
+        return fileLoadCount.get(s);
     }
 
 

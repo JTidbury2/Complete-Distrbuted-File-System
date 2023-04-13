@@ -52,6 +52,9 @@ public class ControllerThread implements Runnable {
     }
 
     private void removeFile(String s) {
+        if (!info.checkFileExist(s)){
+            out.println("ERROR_FILE_DOES_NOT_EXIST " + s);
+        }
         File file = new File(s);
         if (file.delete()) {
             System.out.println("File deleted successfully");
