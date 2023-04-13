@@ -14,7 +14,16 @@ public class ControllerInfo {
   private HashMap <String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
   private HashMap <String, Index> fileIndex = new HashMap<String, Index>();
   private HashMap <String,ArrayList<Integer>> storeAcks = new HashMap<String, ArrayList<Integer>>();
+
+  private HashMap <String,ArrayList<Integer>> removeAcks = new HashMap<String,
+      ArrayList<Integer>>();
   private Object storeLock = new Object();
+
+    private Object removeLock = new Object();
+
+    private Object removeAckLock = new Object();
+
+    private String removeFile = null;
 
   private HashMap <String, Integer> fileSizeMap = new HashMap<String, Integer>();
 
@@ -23,6 +32,10 @@ public class ControllerInfo {
     Integer[] dstores = new Integer[repFactor];
     dstores = dstoreList.subList(0,repFactor).toArray(dstores);
     return dstores;
+  }
+
+  public String getRemoveFile(){
+    return removeFile;
   }
 
 
@@ -56,6 +69,24 @@ public class ControllerInfo {
     return message;
 
   }
+  public void removeAck(String fileName) {
+    if (removeAcks.containsKey(fileName)) {
+      removeAcks.get(fileName).add(1);
+    } else {
+      ArrayList<Integer> acks = new ArrayList<Integer>();
+      acks.add(1);
+      removeAcks.put(fileName, acks);
+    }
+    if (removeAcks.get(fileName).size() == repFactor) {
+      System.out.println("Remove complete");
+      removeAcks.clear();
+      setFileIndex(fileName, Index.REMOVE_COMPLETE);
+      fileList.remove(fileName);
+      removeAckStart();
+    }
+  }
+
+
 
   public void storeAck (String file) {
     if (storeAcks.containsKey(file)) {
@@ -68,15 +99,47 @@ public class ControllerInfo {
     if (storeAcks.get(file).size() == repFactor) {
       System.out.println("Store complete");
       storeAcks.clear();
-      setFileIndex(file, Index.STORE_IN_PROGRESS);
+      setFileIndex(file, Index.STORE_COMPLETE);
       fileList.add(file);
       storeComplete();
     }
   }
+  public void removeStart(String file) {
+    synchronized (removeLock){
+      removeFile = file;
+      removeLock.notifyAll();
+    }
+  }
+
+
+  public void removeWait() {
+    synchronized (removeLock) {
+      try {
+        removeLock.wait();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  public void removeAckWait() {
+    synchronized (removeAckLock) {
+      try {
+        removeAckLock.wait();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    }
+
+
+  private void removeAckStart(){
+   removeAckLock.notifyAll();
+  }
 
   public void storeComplete (){
     synchronized (storeLock) {
-      storeLock.notify();
+      storeLock.notifyAll();
     }
   }
 
@@ -144,7 +207,7 @@ public class ControllerInfo {
   public int[] getFileDStores(String s,int times)
       throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
     if (!fileDstoreMap.containsKey(s)) {
-      throw new FileDoesNotExistException(s);
+      throw new FileDoesNotExistException();
     } else if (dstoreList.size()<repFactor) {
       throw new NotEnoughDstoresException();
     } else if (fileDstoreMap.get(s).size() < times) {
@@ -157,5 +220,6 @@ public class ControllerInfo {
 
   }
 
-  }
+
+}
 

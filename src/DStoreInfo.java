@@ -21,4 +21,9 @@ public void storeControllerMessageGo(String message){
     storeMessage = message;
     storeLock.notifyAll();
   }
-}}
+}
+
+  public void removeFile(String s) {
+
+  }
+}

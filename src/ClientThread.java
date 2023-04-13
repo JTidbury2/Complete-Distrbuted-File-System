@@ -29,23 +29,18 @@ public class ClientThread implements Runnable {
         } else if (line.startsWith("LOAD")){
             String[] input = line.split(" ");
             loadCommand(input[1],1);
+        } else if (line.startsWith("REMOVE")){
+            String[] input = line.split(" ");
+            removeCommand(input[1]);
         }
     }
 
-    private void loadCommand(String s,int times) {
-        try {
-            int[] fileInfo = info.getFileDStores(s,times);
-            int port = fileInfo[0];
-            int filesize = fileInfo[1];
-            String message = "LOAD_FROM " + port+" "+filesize;
-        } catch (NotEnoughDstoresException e) {
-            throw new RuntimeException(e);
-        } catch (FileDoesNotExistException e) {
-            throw new RuntimeException(e);
-        } catch (DStoreCantRecieveException e) {
-            throw new RuntimeException(e);
-        }
+    private void removeCommand(String fileName) {
+        info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
+        info.removeStart(fileName);
     }
+
+
 
     private void storeCommand(String s, String s1) {
         info.setFileIndex(s, Index.STORE_IN_PROGRESS);
@@ -63,7 +58,20 @@ public class ClientThread implements Runnable {
         out.println("STORE_COMPLETE");
         System.out.println("Client thread " + client.getPort() + " returned STORE_COMPLETE");
     }
-
+    private void loadCommand(String s,int times) {
+        try {
+            int[] fileInfo = info.getFileDStores(s,times);
+            int port = fileInfo[0];
+            int filesize = fileInfo[1];
+            String message = "LOAD_FROM " + port+" "+filesize;
+        } catch (NotEnoughDstoresException e) {
+            throw new RuntimeException(e);
+        } catch (FileDoesNotExistException e) {
+            throw new RuntimeException(e);
+        } catch (DStoreCantRecieveException e) {
+            throw new RuntimeException(e);
+        }
+    }
     private void listCommand() {
         String message = null;
         try {
@@ -82,7 +90,7 @@ public class ClientThread implements Runnable {
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
-
+            startThreadWaiters();
             handleCommand(firstCommand);
 
             String line;
@@ -96,5 +104,17 @@ public class ClientThread implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void startThreadWaiters() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Remove ack watcher started");
+                info.removeAckWait();
+                out.println("REMOVE_COMPLETE");
+                System.out.println("REMOVE_COMPLETE");
+            }
+        }).start();
     }
 }

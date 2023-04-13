@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -38,6 +39,21 @@ public class ControllerThread implements Runnable {
     }
 
     private void handleCommand(String line) {
+        if (line.startsWith("REMOVE")) {
+            String[] input = line.split(" ");
+            removeFile(input[1]);
+        }
+    }
+
+    private void removeFile(String s) {
+        File file = new File(s);
+        if (file.delete()) {
+            System.out.println("File deleted successfully");
+            out.println("REMOVE_ACK " + s);
+        } else {
+            System.out.println("Failed to delete the file");
+        }
+        info.removeFile(s);
     }
 
     private void startThreadWaiters() {

@@ -21,6 +21,9 @@ public class DStoreThread implements Runnable {
         if (line.startsWith("STORE_ACK")) {
             System.out.println("DStoreThread" + port + " recieved " + line);
             storeAckCommand(line);
+        } else if (line.startsWith("REMOVE_ACK")) {
+            System.out.println("DStoreThread" + port + " recieved " + line);
+            removeAckCommand(line);
         }
 
     }
@@ -30,6 +33,11 @@ public class DStoreThread implements Runnable {
         info.storeAck(fileName);
     }
 
+    private void removeAckCommand(String line) {
+        String fileName = line.split(" ")[1];
+        info.removeAck(fileName);
+    }
+
     @Override
     public void run() {
         BufferedReader in = null;
@@ -37,7 +45,7 @@ public class DStoreThread implements Runnable {
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(new Socket("localhost", port).getOutputStream(), true);
-
+            startThreadWaiters();
             out.println("LIST");
 
             String line;
@@ -51,5 +59,17 @@ public class DStoreThread implements Runnable {
             e.printStackTrace();
         }
 
+    }
+
+    private void startThreadWaiters() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Remove watcher started");
+                info.removeWait();
+                out.println("REMOVE " + info.getRemoveFile());
+                System.out.println("REMOVE " + info.getRemoveFile());
+            }
+        }).start();
     }
 }

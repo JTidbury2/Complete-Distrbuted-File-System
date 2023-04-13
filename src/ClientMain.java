@@ -97,7 +97,6 @@ public class ClientMain {
 			File fileList[] = uploadFolder.listFiles();
 			if (fileList.length > 0) {
 				try { client.store(fileList[0]); } catch(IOException e) { e.printStackTrace(); }				
-				try { client.store(fileList[0]); } catch(IOException e) { e.printStackTrace(); }
 			}
 			if (fileList.length > 1) {
 				try { client.store(fileList[1]); } catch(IOException e) { e.printStackTrace(); }
