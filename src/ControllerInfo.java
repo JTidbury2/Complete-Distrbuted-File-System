@@ -31,6 +31,10 @@ public class ControllerInfo {
 
     private HashMap<String, Integer> fileSizeMap = new HashMap<String, Integer>();
 
+    public boolean checkFile (String fileName) {
+        return fileList.contains(fileName);
+    }
+
     public boolean getRemoveAckFlag() {
         return removeAckFlag;
     }

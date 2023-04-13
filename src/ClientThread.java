@@ -36,9 +36,14 @@ public class ClientThread implements Runnable {
     }
 
     private void removeCommand(String fileName) {
-        info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
-        System.out.println("Client thread " + client.getPort() + " received REMOVE " + fileName);
-        info.removeStart(fileName);
+        if (info.checkFile(fileName)) {
+            info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
+            System.out.println(
+                "Client thread " + client.getPort() + " received REMOVE " + fileName);
+            info.removeStart(fileName);
+        } else {
+            out.println("ERROR_FILE_DOES_NOT_EXIST");
+        }
     }
 
 

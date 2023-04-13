@@ -28,7 +28,7 @@ public class ClientMain {
 
 		// launch a single client
 		testClient(cport, timeout, downloadFolder, uploadFolder);
-		/**
+
 		// launch a number of concurrent clients, each doing the same operations
 		for (int i = 0; i < 10; i++) {
 			new Thread() {
@@ -37,7 +37,7 @@ public class ClientMain {
 				}
 			}.start();
 		}
-		 */
+
 	}
 	
 	public static void test2Client(int cport, int timeout, File downloadFolder, File uploadFolder) {
@@ -86,7 +86,7 @@ public class ClientMain {
 		Client client = null;
 		
 		try {
-			
+
 			client = new Client(cport, timeout, Logger.LoggingType.ON_FILE_AND_TERMINAL);
 		
 			try { client.connect(); } catch(IOException e) { e.printStackTrace(); return; }
