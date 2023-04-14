@@ -36,6 +36,7 @@ public class DStoreThread implements Runnable {
 
     private void listCommand(String[] files) {
         info.updateDstoreFiles(files, port);
+        info.reloadAck(port);
     }
 
 
@@ -87,5 +88,20 @@ public class DStoreThread implements Runnable {
                 }
             }
         }, "Remove Start Watcher Thread").start();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (info.isRebalanceFlag()) {
+                    System.out.println("Rebalance watcher started");
+                    info.storeWait();
+                    String files_to_remove = info.getRemoveFiles(port);
+                    String files_to_send = info.getSendFiles(port);
+
+
+                    out.println("REBALANCE "+files_to_send+" " + files_to_remove);
+                }
+            }
+        }, "Store Start Watcher Thread").start();
     }
 }
