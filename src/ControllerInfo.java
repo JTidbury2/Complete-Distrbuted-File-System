@@ -336,5 +336,23 @@ public class ControllerInfo {
     }
 
 
+    public void updateDstoreFiles(String[] files, int port) {
+        synchronized (fileLock) {
+            for (String file : files) {
+                if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)){
+                    fileDstoreMap.get(file).add(port);
+                } else {
+                    ArrayList<Integer> dstores = new ArrayList<Integer>();
+                    dstores.add(port);
+                    fileDstoreMap.put(file, dstores);
+                }
+            }
+            for (String file: fileDstoreMap.get(file)) {
+                if (!Arrays.asList(files).contains(file)) {
+                    fileDstoreMap.get(file).remove(port);
+                }
+            }
+        }
+    }
 }
 

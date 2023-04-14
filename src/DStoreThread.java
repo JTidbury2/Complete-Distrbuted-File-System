@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Arrays;
 
 public class DStoreThread implements Runnable {
 
@@ -19,14 +20,24 @@ public class DStoreThread implements Runnable {
 
     private void handleCommand(String line) {
         if (line.startsWith("STORE_ACK")) {
-            System.out.println("DStoreThread" + port + " recieved " + line);
+            System.out.println("DStoreThread " + port + " recieved " + line);
             storeAckCommand(line);
         } else if (line.startsWith("REMOVE_ACK")) {
-            System.out.println("DStoreThread" + port + " recieved " + line);
+            System.out.println("DStoreThread " + port + " recieved " + line);
             removeAckCommand(line);
+        } else if (line.startsWith("LIST")) {
+            String[] input = line.split(" ");
+            String[] files = Arrays.copyOfRange(input, 1, input.length);
+            System.out.println("DStoreThread " + port + " recieved " + line);
+            listCommand(files);
         }
 
     }
+
+    private void listCommand(String[] files) {
+        info.updateDstoreFiles(files, port);
+    }
+
 
     private void storeAckCommand(String line) {
         String fileName = line.split(" ")[1];
