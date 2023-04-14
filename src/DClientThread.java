@@ -21,11 +21,13 @@ public class DClientThread implements Runnable {
     BufferedReader in = null;
     InputStream inStream = null;
     DStoreInfo info;
+    String fileFolder;
 
-    public DClientThread(Socket client, String line, DStoreInfo infos) {
+    public DClientThread(Socket client, String line, DStoreInfo infos,String fileFolder) {
         this.client = client;
         this.firstCommand = line;
         info = infos;
+        this.fileFolder = fileFolder;
     }
 
     @Override
@@ -94,6 +96,8 @@ public class DClientThread implements Runnable {
     }
 
     private void storeCommand(String filename, String filesize) {
+        File folder = createFolder();
+
         out.println("ACK");
         System.out.println("DClient thread " + client.getPort() + " ACK sent");
 
@@ -107,7 +111,7 @@ public class DClientThread implements Runnable {
 
         System.out.println("DClient thread " + client.getPort() + " File received");
 
-        File outFile = new File(filename);
+        File outFile = new File(folder,filename);
         try {
             outFile.createNewFile();
         } catch (IOException e) {
@@ -126,5 +130,22 @@ public class DClientThread implements Runnable {
         info.addFile(filename);
         info.addFileSize(filename, size);
         info.storeControllerMessageGo(filename);
+    }
+
+    private File createFolder(){
+        String folderName = fileFolder;
+        File folder = new File(System.getProperty("user.dir"), folderName);
+
+        if (!folder.exists()) {
+            boolean created = folder.mkdirs();
+            if (created) {
+                System.out.println("Folder created successfully.");
+            } else {
+                System.out.println("Failed to create folder.");
+            }
+        } else {
+            System.out.println("Folder already exists.");
+        }
+        return folder;
     }
 }

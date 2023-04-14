@@ -49,6 +49,8 @@ public void storeControllerMessageGo(String message){
         fileList.add(file);
     }
 
+
+
     public ArrayList<String> getFileList() {
         return fileList;
     }

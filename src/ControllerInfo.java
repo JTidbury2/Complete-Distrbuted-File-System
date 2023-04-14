@@ -97,6 +97,13 @@ public class ControllerInfo {
                 dstores.add(dstore);
                 fileDstoreMap.put(fileName, dstores);
             }
+            if (dstoreFileMap.containsKey(dstore)) {
+                dstoreFileMap.get(dstore).add(fileName);
+            } else {
+                ArrayList<String> files = new ArrayList<String>();
+                files.add(fileName);
+                dstoreFileMap.put(dstore, files);
+            }
         }
     }
 
@@ -176,6 +183,18 @@ public class ControllerInfo {
         synchronized (rebalanceLock) {
             try {
                 rebalanceLock.wait();
+                System.out.println("Stats");
+                System.out.println("Dstore list: " + dstoreList);
+                System.out.println("File list: " + fileList);
+                System.out.println("File dstore map: " + fileDstoreMap);
+                System.out.println("Dstore file map: " + dstoreFileMap);
+                System.out.println("New file dstore map: " + newFileDstoreMap);
+                System.out.println("New dstore file map: " + newDstoreFileMap);
+                System.out.println("Dstore remove map: " + dstoreRemoveMap);
+                System.out.println("Dstore add map: " + dstoreAddMap);
+                System.out.println("Dstore need map: " + dstoreNeedMap);
+                System.out.println("File index: " + fileIndex);
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -217,6 +236,11 @@ public class ControllerInfo {
                 fileDstoreMap.remove(fileName);
                 fileSizeMap.remove(fileName);
                 fileLoadCount.remove(fileName);
+                for (Integer dstore : dstoreList) {
+                    if (dstoreFileMap.containsKey(dstore)) {
+                        dstoreFileMap.get(dstore).remove(fileName);
+                    }
+                }
                 removeAckStart();
             }
 
@@ -421,8 +445,17 @@ public class ControllerInfo {
                     dstores.add(port);
                     fileDstoreMap.put(file, dstores);
                 }
+                if (dstoreFileMap != null && dstoreFileMap.containsKey(port)) {
+                    dstoreFileMap.get(port).add(file);
+                } else {
+                    ArrayList<String> filesList = new ArrayList<String>();
+                    filesList.add(file);
+                    dstoreFileMap.put(port, filesList);
+                }
+
 
             }
+
         }
     }
 
@@ -437,9 +470,10 @@ public class ControllerInfo {
     }
 
     public String getRemoveFiles(int port) {
-        synchronized (fileLock) {
+        synchronized (rebalanceLock) {
             String result = "";
             if (!dstoreRemoveMap.containsKey(port)) {
+                System.out.println("No files to remove");
                 return "";
             }
             for (String file : dstoreRemoveMap.get(port)) {
@@ -453,9 +487,10 @@ public class ControllerInfo {
     }
 
     public String getSendFiles(int port) {
-        synchronized (fileLock) {
+        synchronized (rebalanceLock) {
             String result = "";
             if (!dstoreNeedMap.containsKey(port)) {
+                System.out.println("No files to send");
                 return "";
             }
             int counter=0;
@@ -478,16 +513,40 @@ public class ControllerInfo {
     }
 
     public void rebalanceDStores() {
-        newFileDstoreMap.clear();
-        newDstoreFileMap.clear();
-        for (String file : fileList) {
-            getRebalanceDstores(file);
-        }
-        createRemoveMap();
-        createNeedMap();
-        fileDstoreMap = newFileDstoreMap;
-        dstoreFileMap = newDstoreFileMap;
+        synchronized (rebalanceLock) {
+            systemCheck(1);
+            System.out.println("Rebalancing dstores");
 
+            newFileDstoreMap.clear();
+            systemCheck(2);
+            newDstoreFileMap.clear();
+            systemCheck(3);
+            for (String file : fileList) {
+                getRebalanceDstores(file);
+            }
+            systemCheck(4);
+            createRemoveMap();
+            createNeedMap();
+            systemCheck(5);
+            fileDstoreMap = new HashMap<>(newFileDstoreMap);
+            dstoreFileMap = new HashMap<>(newDstoreFileMap);
+            systemCheck(6);
+        }
+
+    }
+
+    private void systemCheck(int number){
+        System.out.println("*************************************");
+        System.out.println("FileList: "+number + fileList);
+        System.out.println("FileDstoreMap: "+number  + fileDstoreMap);
+        System.out.println("newFileDstoreMap: "+number  + newFileDstoreMap);
+        System.out.println("DstoreFileMap: "+number  + dstoreFileMap);
+        System.out.println("newDstoreFileMap: "+number  + newDstoreFileMap);
+        System.out.println("fileSizeMap: "+number  + fileSizeMap);
+        System.out.println("DstoreList: "+number  + dstoreList);
+        System.out.println("DstoreNeedMap: "+number  + dstoreNeedMap);
+        System.out.println("DstoreRemoveMap: "+number  + dstoreRemoveMap);
+        System.out.println("*************************************");
 
     }
 
@@ -497,7 +556,7 @@ public class ControllerInfo {
             if (newDstoreFileMap.containsKey(dstore)) {
                 ArrayList<String> files = new ArrayList<>(newDstoreFileMap.get(dstore));
                 for (String file : files) {
-                    if (!dstoreFileMap.get(dstore).contains(file)) {
+                    if (!dstoreFileMap.containsKey(dstore)||!dstoreFileMap.get(dstore).contains(file) ) {
                         if (dstoreNeedMap.containsKey(file)) {
                             dstoreNeedMap.get(file).add(dstore);
                         } else {
@@ -512,10 +571,17 @@ public class ControllerInfo {
     }
 
     private void createRemoveMap() {
-        for (int dstore : dstoreList) {
+        System.out.println("££££££0000000000000000000000000 Notice me");
+        System.out.println(dstoreList);
+        System.out.println(newDstoreFileMap);
+        System.out.println(dstoreFileMap);
+        for (int dstore : dstoreFileMap.keySet()) {
+            System.out.println("££££££ Notice me");
             if (newDstoreFileMap.containsKey(dstore)) {
+                System.out.println("88888888 Notice me");
                 ArrayList<String> files = new ArrayList<>(dstoreFileMap.get(dstore));
                 for (String file : files) {
+                    System.out.println("777777777 Notice me");
                     if (!newDstoreFileMap.get(dstore).contains(file)) {
                         if (dstoreRemoveMap.containsKey(dstore)) {
                             dstoreRemoveMap.get(dstore).add(file);
@@ -528,6 +594,7 @@ public class ControllerInfo {
                 }
             }
         }
+        System.out.println(dstoreRemoveMap);
     }
 
     public void getRebalanceDstores(String file) {

@@ -89,7 +89,7 @@ public class DStore {
 
     private static void setUpClientThread(Socket client, String line) {
         System.out.println("ClientThread "+client.getPort()+" started");
-        new Thread(new DClientThread(client, line, info),"Client Thread "+client.getPort()).start();
+        new Thread(new DClientThread(client, line, info,fileFolder),"Client Thread "+client.getPort()).start();
     }
 
     private static void setUpControllerThread(Socket client, Socket client2) {

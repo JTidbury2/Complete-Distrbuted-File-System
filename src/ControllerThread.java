@@ -65,7 +65,7 @@ public class ControllerThread implements Runnable {
 
     private void rebalance(String[] s) {
         if (s.length < 2) {
-            System.out.println("Rebalance complete");
+            System.out.println("Rebalance complete list too short");
             out.println("REBALANCE_COMPLETE");
             return;
         }
@@ -102,6 +102,8 @@ public class ControllerThread implements Runnable {
 
         }
         System.out.println("Rebalance complete");
+        System.out.println("CHECK");
+        System.out.println("LIST OF FILES"+ info.getFiles());
         out.println("REBALANCE_COMPLETE");
     }
 
