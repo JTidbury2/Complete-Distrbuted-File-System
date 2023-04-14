@@ -42,6 +42,10 @@ public class ClientThread implements Runnable {
         }
         try {
             if (info.checkFile(fileName)) {
+                info.removeFileFileList(fileName);
+                info.removeFileDstoreMap(fileName);
+                info.removeFileSizeMap(fileName);
+                info.removeFileLoadCount(fileName);
                 info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
                 System.out.println(
                     "Client thread " + client.getPort() + " received REMOVE " + fileName);
@@ -57,11 +61,12 @@ public class ClientThread implements Runnable {
 
 
     private void storeCommand(String s, String s1) {
+        System.out.println("Store command started");
         if (info.getFileIndex(s)== Index.REMOVE_IN_PROGRESS||info.getFileIndex(s) == Index.STORE_IN_PROGRESS) {
+            System.out.println("Concurrency error");
             out.println("ERROR_FILE_ALREADY_EXISTS");
             return;
         }
-        info.setFileIndex(s, Index.STORE_IN_PROGRESS);
         info.updateFileSize(s, Integer.parseInt(s1));
         String message = null;
         try {
@@ -71,6 +76,7 @@ public class ClientThread implements Runnable {
         } catch (FileAlreadyExistsException e) {
             message = "ERROR_FILE_ALREADY_EXISTS";
         }
+        info.setFileIndex(s, Index.STORE_IN_PROGRESS);
         out.println(message);
         System.out.println("Client thread " + client.getPort() + " returned " + message);
         info.storeWait();
@@ -79,16 +85,22 @@ public class ClientThread implements Runnable {
     }
 
     private void loadCommand(String s, int times) {
+        System.out.println("Load command started");
         if (info.getFileIndex(s) == Index.REMOVE_IN_PROGRESS||info.getFileIndex(s) == Index.STORE_IN_PROGRESS) {
+            System.out.println("Concurrency error");
             out.println("ERROR_FILE_DOES_NOT_EXIST");
             return;
         }
         try {
+            System.out.println("0");
             int[] fileInfo = info.getFileDStores(s, times);
             int port = fileInfo[0];
             int filesize = fileInfo[1];
             String message = "LOAD_FROM " + port + " " + filesize;
+            System.out.println("1");
+            System.out.println(message);
             out.println(message);
+            System.out.println("3");
         } catch (NotEnoughDstoresException e) {
             out.println("ERROR_NOT_ENOUGH_DSTORES");
         } catch (FileDoesNotExistException e) {
@@ -99,6 +111,7 @@ public class ClientThread implements Runnable {
     }
 
     private void listCommand() {
+        System.out.println("List command started");
         String message = null;
         try {
             message = info.list();

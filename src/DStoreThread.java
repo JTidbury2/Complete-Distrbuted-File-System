@@ -37,6 +37,7 @@ public class DStoreThread implements Runnable {
     private void removeAckCommand(String line) {
         String fileName = line.split(" ")[1];
         info.removeAck(fileName);
+
     }
 
     @Override

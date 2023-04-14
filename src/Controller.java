@@ -63,7 +63,7 @@ public class Controller {
                                     break;
                                 } else if ((line.startsWith("LIST") || line.startsWith("STORE")
                                     || line.startsWith(
-                                    "REMOVE"))) {
+                                    "REMOVE") || line.startsWith("LOAD"))) {
                                     setUpClientThread(client, line);
                                     closeFlag = false;
                                     break;

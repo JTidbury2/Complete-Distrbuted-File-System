@@ -66,6 +66,7 @@ public class DClientThread implements Runnable {
     private void loadData(String fileName) throws IOException {
         System.out.println("DClient thread " + client.getPort() + " LOAD_DATA "+ fileName+" received");
         if (!info.checkFileExist(fileName)) {
+            System.out.println("DSTore file does not exist");
             client.close();
             return;
         }
@@ -122,6 +123,7 @@ public class DClientThread implements Runnable {
             e.printStackTrace();
         }
         // TODO add file folder funcitonality
+        info.addFile(filename);
         info.storeControllerMessageGo(filename);
     }
 }

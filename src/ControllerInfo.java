@@ -31,13 +31,17 @@ public class ControllerInfo {
 
     boolean removeFlag = true;
 
+    Object fileLock = new Object();
+
 
 
     public boolean checkFile (String fileName) throws NotEnoughDstoresException {
-        if (dstoreList.size() < repFactor) {
-            throw new NotEnoughDstoresException();
+        synchronized (fileLock) {
+            if (dstoreList.size() < repFactor) {
+                throw new NotEnoughDstoresException();
+            }
+            return fileIndex.containsKey(fileName);
         }
-        return fileIndex.containsKey(fileName);
     }
 
     public boolean getRemoveAckFlag() {
@@ -53,24 +57,30 @@ public class ControllerInfo {
     }
 
     public void updateFileDstores(String fileName, Integer dstore) {
-        if (fileDstoreMap.containsKey(fileName)) {
-            fileDstoreMap.get(fileName).add(dstore);
-        } else {
-            ArrayList<Integer> dstores = new ArrayList<Integer>();
-            dstores.add(dstore);
-            fileDstoreMap.put(fileName, dstores);
+        synchronized (fileLock) {
+            if (fileDstoreMap.containsKey(fileName)) {
+                fileDstoreMap.get(fileName).add(dstore);
+            } else {
+                ArrayList<Integer> dstores = new ArrayList<Integer>();
+                dstores.add(dstore);
+                fileDstoreMap.put(fileName, dstores);
+            }
         }
     }
 
     public void updateFileSize(String fileName, Integer size) {
-        fileSizeMap.put(fileName, size);
+        synchronized (fileLock) {
+            fileSizeMap.put(fileName, size);
+        }
     }
 
 
     public Integer[] getStoreDStores() {
-        Integer[] dstores = new Integer[repFactor];
-        dstores = dstoreList.subList(0, repFactor).toArray(dstores);
-        return dstores;
+        synchronized (fileLock) {
+            Integer[] dstores = new Integer[repFactor];
+            dstores = dstoreList.subList(0, repFactor).toArray(dstores);
+            return dstores;
+        }
     }
 
     public String getRemoveFile() {
@@ -78,70 +88,109 @@ public class ControllerInfo {
     }
 
 
-    public String list() throws NotEnoughDstoresException {
-        if (dstoreList.size() < repFactor) {
-            throw new NotEnoughDstoresException();
-        }
-        String message = "";
-        for (String file : fileList) {
-            message += file + " ";
+    public String  list() throws NotEnoughDstoresException {
+        synchronized (fileLock) {
+            if (dstoreList.size() < repFactor) {
+                throw new NotEnoughDstoresException();
+            }
+            String message = "";
+            for (String file : fileList) {
+                message += file + " ";
 
+            }
+            message.trim();
+            message = "LIST " + message;
+            return message;
         }
-        message.trim();
-        message = "LIST " + message;
-        return message;
     }
 
     public String storeTo(String name)
         throws NotEnoughDstoresException, FileAlreadyExistsException {
-        if (dstoreList.size() < repFactor) {
-            throw new NotEnoughDstoresException();
+        synchronized (fileLock) {
+            if (dstoreList.size() < repFactor) {
+                throw new NotEnoughDstoresException();
+            }
+            if (fileIndex.containsKey(name)) {
+                throw new FileAlreadyExistsException(name);
+            }
+            Integer[] dstores = getStoreDStores();
+            String message = "STORE_TO ";
+            for (Integer num : dstores) {
+                message += num + " ";
+            }
+            message.trim();
+            return message;
         }
-        if (fileList.contains(name)) {
-            throw new FileAlreadyExistsException(name);
-        }
-        Integer[] dstores = getStoreDStores();
-        String message = "STORE_TO ";
-        for (Integer num : dstores) {
-            message += num + " ";
-        }
-        message.trim();
-        return message;
 
     }
 
     public void removeAck(String fileName) {
-        if (removeAcks.containsKey(fileName)) {
-            removeAcks.get(fileName).add(1);
-        } else {
-            ArrayList<Integer> acks = new ArrayList<Integer>();
-            acks.add(1);
-            removeAcks.put(fileName, acks);
+        synchronized (fileLock) {
+            if (removeAcks.containsKey(fileName)) {
+                removeAcks.get(fileName).add(1);
+            } else {
+                ArrayList<Integer> acks = new ArrayList<Integer>();
+                acks.add(1);
+                removeAcks.put(fileName, acks);
+            }
+            if (removeAcks.get(fileName).size() == repFactor) {
+                System.out.println("Remove complete");
+                removeAcks.clear();
+                setFileIndex(fileName, Index.REMOVE_COMPLETE);
+                fileList.remove(fileName);
+                fileIndex.remove(fileName);
+                fileDstoreMap.remove(fileName);
+                fileSizeMap.remove(fileName);
+                fileLoadCount.remove(fileName);
+                removeAckStart();
+            }
+
         }
-        if (removeAcks.get(fileName).size() == repFactor) {
-            System.out.println("Remove complete");
-            removeAcks.clear();
-            setFileIndex(fileName, Index.REMOVE_COMPLETE);
+    }
+
+    public void removeFileFileList(String fileName) {
+        synchronized (fileLock){
             fileList.remove(fileName);
-            removeAckStart();
+        }
+
+    }
+
+    public void removeFileDstoreMap(String fileName) {
+        synchronized (fileLock){
+            fileDstoreMap.remove(fileName);
+        }
+    }
+
+    public void removeFileSizeMap(String fileName) {
+        synchronized (fileLock){
+            fileSizeMap.remove(fileName);
+        }
+
+    }
+
+    public void removeFileLoadCount (String fileName) {
+        synchronized (fileLock){
+            fileLoadCount.remove(fileName);
         }
     }
 
 
     public void storeAck(String file) {
-        if (storeAcks.containsKey(file)) {
-            storeAcks.get(file).add(1);
-        } else {
-            ArrayList<Integer> acks = new ArrayList<Integer>();
-            acks.add(1);
-            storeAcks.put(file, acks);
-        }
-        if (storeAcks.get(file).size() == repFactor) {
-            System.out.println("Store complete");
-            storeAcks.clear();
-            setFileIndex(file, Index.STORE_COMPLETE);
-            fileList.add(file);
-            storeComplete();
+        synchronized (fileLock) {
+            if (storeAcks.containsKey(file)) {
+                storeAcks.get(file).add(1);
+            } else {
+                ArrayList<Integer> acks = new ArrayList<Integer>();
+                acks.add(1);
+                storeAcks.put(file, acks);
+            }
+            if (storeAcks.get(file).size() == repFactor) {
+                System.out.println("Store complete");
+                storeAcks.clear();
+                setFileIndex(file, Index.STORE_COMPLETE);
+                fileList.add(file);
+                storeComplete();
+            }
         }
     }
 
@@ -149,6 +198,7 @@ public class ControllerInfo {
         synchronized (removeLock) {
             removeFile = file;
             removeLock.notifyAll();
+
             System.out.println("Remove start");
         }
     }
@@ -227,11 +277,17 @@ public class ControllerInfo {
     }
 
     public void setFileIndex(String file, Index index) {
-        fileIndex.put(file, index);
+        synchronized (fileLock){
+            fileIndex.put(file, index);
+        }
+
     }
 
     public Index getFileIndex(String file) {
-        return fileIndex.get(file);
+        synchronized (fileLock){
+            return fileIndex.get(file);
+        }
+
     }
 
     public ArrayList<Integer> getDstoreList() {
@@ -243,7 +299,9 @@ public class ControllerInfo {
     }
 
     public void addDstore(int dstore) {
-        dstoreList.add(dstore);
+        synchronized (fileLock){
+            dstoreList.add(dstore);
+        }
     }
 
     public void setCport(int cport) {
@@ -252,25 +310,29 @@ public class ControllerInfo {
 
     public int[] getFileDStores(String s, int times)
         throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
-        System.out.println(fileDstoreMap);
-        times = times - 1;
-        if (!fileIndex.containsKey(s)) {
-            throw new FileDoesNotExistException();
-        } else if (dstoreList.size() < repFactor) {
-            throw new NotEnoughDstoresException();
-        } else if (fileDstoreMap.get(s).size() == times) {
-            throw new DStoreCantRecieveException();
+        synchronized (fileLock) {
+            System.out.println(fileDstoreMap);
+            times = times - 1;
+            if (!fileIndex.containsKey(s)) {
+                throw new FileDoesNotExistException();
+            } else if (dstoreList.size() < repFactor) {
+                throw new NotEnoughDstoresException();
+            } else if (fileDstoreMap.get(s).size() == times) {
+                throw new DStoreCantRecieveException();
+            }
+            System.out.println("File: " + s + " Dstores: " + fileDstoreMap.get(s).get(times));
+            int[] result = new int[2];
+            result[0] = fileDstoreMap.get(s).get(times);
+            result[1] = fileSizeMap.get(s);
+            return result;
         }
-        System.out.println("File: " + s + " Dstores: " + fileDstoreMap.get(s).get(times));
-        int[] result = new int[2];
-        result[0] = fileDstoreMap.get(s).get(times);
-        result[1] = fileSizeMap.get(s);
-        return result;
     }
 
     public int getFileLoadTimes (String s) {
-        fileLoadCount.put(s, fileLoadCount.getOrDefault(s, 0) + 1);
-        return fileLoadCount.get(s);
+        synchronized (fileLock) {
+            fileLoadCount.put(s, fileLoadCount.getOrDefault(s, 0) + 1);
+            return fileLoadCount.get(s);
+        }
     }
 
 
