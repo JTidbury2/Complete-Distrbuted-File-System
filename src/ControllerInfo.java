@@ -12,6 +12,8 @@ public class ControllerInfo {
     private ArrayList<Integer> dstoreList = new ArrayList<Integer>();
     private ArrayList<String> fileList = new ArrayList<String>();
     private HashMap<String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
+
+    private HashMap<Integer,ArrayList<String>> dstoreFileMap = new HashMap<Integer,ArrayList<String>>();
     private HashMap<String, Index> fileIndex = new HashMap<String, Index>();
     private HashMap<String, ArrayList<Integer>> storeAcks = new HashMap<String, ArrayList<Integer>>();
     private HashMap<String, Integer> fileSizeMap = new HashMap<String, Integer>();
@@ -346,13 +348,65 @@ public class ControllerInfo {
                     dstores.add(port);
                     fileDstoreMap.put(file, dstores);
                 }
+
             }
-            for (String file: fileDstoreMap.get(file)) {
-                if (!Arrays.asList(files).contains(file)) {
-                    fileDstoreMap.get(file).remove(port);
+        }
+    }
+
+    public void removeDstoreFiles(String[] files, int port) {
+        synchronized (fileLock) {
+            for (String file : files) {
+                if (fileDstoreMap.containsKey(file) && fileDstoreMap.get(file).contains(port)){
+                    fileDstoreMap.get(file).remove((Integer) port);
                 }
             }
         }
+    }
+
+    public void rebalanceDStores(){
+        fileDstoreMap.clear();
+        dstoreFileMap.clear();
+        for (String file : fileList) {
+            getRebalanceDstores(file);
+        }
+
+        }
+
+    public void getRebalanceDstores(String file){
+
+        ArrayList<Integer> currentDstores = new ArrayList<>();
+        ArrayList<Integer> allDstores = new ArrayList<>(dstoreList);
+        for (int k = 0; k<repFactor;k++){
+            Integer minDstore = getMinDstore(allDstores);
+            currentDstores.add(minDstore);
+            allDstores.remove(minDstore);
+        }
+        fileDstoreMap.put(file, currentDstores);
+        for (int dstore:currentDstores){
+            if (dstoreFileMap.containsKey(dstore)){
+                dstoreFileMap.get(dstore).add(file);
+            } else {
+                ArrayList<String> files = new ArrayList<>();
+                files.add(file);
+                dstoreFileMap.put(dstore, files);
+            }
+        }
+
+
+
+    }
+
+    public Integer getMinDstore(ArrayList<Integer> dstoreList){
+        //TODO start again stores
+        Integer min = dstoreFileMap.getOrDefault(dstoreList.get(0),new ArrayList<>()).size();
+        Integer minDstore = dstoreList.get(0);
+        for (int dstore:dstoreList){
+            if (dstoreFileMap.get(dstore).size() < min){
+                min = dstoreFileMap.get(dstore).size();
+                minDstore = dstore;
+            }
+        }
+        return minDstore;
     }
 }
 
