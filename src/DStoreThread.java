@@ -36,7 +36,7 @@ public class DStoreThread implements Runnable {
 
     private void listCommand(String[] files) {
         info.updateDstoreFiles(files, port);
-        info.reloadAck(port);
+        info.rebalanceStart();
     }
 
 
@@ -63,6 +63,8 @@ public class DStoreThread implements Runnable {
             out.println("LIST");
 
             String line;
+            System.out.println("DStoreThread " + port + " started");
+
             while ((line = in.readLine()) != null) {
                 System.out.println("DStore " + port + "recieved: " + line);
                 handleCommand(line);
@@ -103,5 +105,16 @@ public class DStoreThread implements Runnable {
                 }
             }
         }, "Store Start Watcher Thread").start();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(info.getListFlag()){
+                    System.out.println("List watcher started");
+                    info.joinWait();
+                    out.println("LIST");
+                }
+            }
+        },"LIST Watcher thread").start();
     }
 }

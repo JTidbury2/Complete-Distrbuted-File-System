@@ -48,4 +48,17 @@ public void storeControllerMessageGo(String message){
     public void addFile(String file) {
         fileList.add(file);
     }
+
+    public ArrayList<String> getFileList() {
+        return fileList;
+    }
+
+    public String getFiles(){
+          String files = "";
+            for (String s : fileList){
+                files += s + " ";
+            }
+            files.trim();
+            return files;
+    }
 }

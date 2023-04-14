@@ -9,6 +9,8 @@ public class ControllerInfo {
     private int repFactor = 0;
     private int timeOut = 0;
     private int rebalanceTime = 0;
+
+    private boolean listFlag = true;
     private ArrayList<Integer> dstoreList = new ArrayList<Integer>();
     private ArrayList<String> fileList = new ArrayList<String>();
     private HashMap<String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
@@ -37,6 +39,8 @@ public class ControllerInfo {
 
     private HashMap<String, Integer> fileLoadCount = new HashMap<String, Integer>();
     private Object storeLock = new Object();
+
+    private Object joinLock = new Object();
 
     private Object removeLock = new Object();
 
@@ -96,6 +100,10 @@ public class ControllerInfo {
         }
     }
 
+    public boolean getListFlag() {
+        return listFlag;
+    }
+
     public void updateFileSize(String fileName, Integer size) {
         synchronized (fileLock) {
             fileSizeMap.put(fileName, size);
@@ -152,14 +160,10 @@ public class ControllerInfo {
 
     }
 
-    public void reloadAck(Integer dstore) {
-        synchronized (fileLock) {
-            rebalanceStart();
-        }
 
 
 
-    }
+
 
     public void rebalanceStart() {
         synchronized (rebalanceLock) {
@@ -175,6 +179,22 @@ public class ControllerInfo {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    public void joinWait() {
+        synchronized (joinLock) {
+            try {
+                joinLock.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void joinStart() {
+        synchronized (joinLock) {
+            joinLock.notifyAll();
         }
     }
 
@@ -419,6 +439,9 @@ public class ControllerInfo {
     public String getRemoveFiles(int port) {
         synchronized (fileLock) {
             String result = "";
+            if (!dstoreRemoveMap.containsKey(port)) {
+                return "";
+            }
             for (String file : dstoreRemoveMap.get(port)) {
                 result += file + " ";
             }
@@ -432,6 +455,9 @@ public class ControllerInfo {
     public String getSendFiles(int port) {
         synchronized (fileLock) {
             String result = "";
+            if (!dstoreNeedMap.containsKey(port)) {
+                return "";
+            }
             int counter=0;
             for (String file : dstoreFileMap.get(port)) {
                 String tempResult = "";
@@ -532,8 +558,8 @@ public class ControllerInfo {
         Integer min = newDstoreFileMap.getOrDefault(dstoreList.get(0), new ArrayList<>()).size();
         Integer minDstore = dstoreList.get(0);
         for (int dstore : dstoreList) {
-            if (newDstoreFileMap.get(dstore).size() < min) {
-                min = newDstoreFileMap.get(dstore).size();
+            if (newDstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size() < min) {
+                min = newDstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size();
                 minDstore = dstore;
             }
         }

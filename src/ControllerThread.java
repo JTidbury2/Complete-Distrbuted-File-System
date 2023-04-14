@@ -29,6 +29,7 @@ public class ControllerThread implements Runnable {
             in = new BufferedReader(
                 new InputStreamReader(dstoreIn.getInputStream()));
             startThreadWaiters();
+            handleCommand("LIST");
 
             String line;
             System.out.println("Controller thread " + controller.getPort() + " started");
@@ -55,10 +56,19 @@ public class ControllerThread implements Runnable {
             String[] input = line.split(" ");
             rebalance(input);
 
+        } else if (line.startsWith("LIST")){
+            System.out.println("Controller thread recieved " + line);
+            System.out.println("Controller thread returned: LIST " + info.getFiles());
+            out.println("LIST "+ info.getFiles());
         }
     }
 
     private void rebalance(String[] s) {
+        if (s.length < 2) {
+            System.out.println("Rebalance complete");
+            out.println("REBALANCE_COMPLETE");
+            return;
+        }
         int counter = 2;
         int addCounter = Integer.parseInt(s[1]);
         int addCurrent = 0;
