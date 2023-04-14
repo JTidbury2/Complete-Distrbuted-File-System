@@ -153,13 +153,10 @@ public class ControllerInfo {
     }
 
     public void reloadAck(Integer dstore) {
-        if (!reloadAck.contains(dstore)) {
-            reloadAck.add(dstore);
-        }
-        if (reloadAck.size() == dstoreList.size()) {
-            reloadAck.clear();
+        synchronized (fileLock) {
             rebalanceStart();
         }
+
 
 
     }

@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class DStoreInfo {
 private final Object storeLock = new Object();
@@ -7,6 +8,8 @@ boolean storeFlag = true;
 String storeMessage = null;
 
 private ArrayList<String> fileList = new ArrayList<>();
+
+private HashMap<String,Integer> fileSize = new HashMap<>();
 
 public void storeControllerMessage(){
   synchronized(storeLock) {
@@ -18,6 +21,13 @@ public void storeControllerMessage(){
       e.printStackTrace();
     }
   }
+}
+public int getFileSize(String fileName){
+  return fileSize.get(fileName);
+}
+
+public void addFileSize(String fileName, int size){
+  fileSize.put(fileName,size);
 }
 
 public void storeControllerMessageGo(String message){

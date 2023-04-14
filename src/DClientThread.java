@@ -54,7 +54,7 @@ public class DClientThread implements Runnable {
     }
 
     private void handleCommand(String line) throws IOException {
-        if (line.startsWith("STORE")) {
+        if (line.startsWith("STORE")||line.startsWith("REBALANCE")) {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
         }else if (line.startsWith("LOAD_DATA")) {
@@ -124,6 +124,7 @@ public class DClientThread implements Runnable {
         }
         // TODO add file folder funcitonality
         info.addFile(filename);
+        info.addFileSize(filename, size);
         info.storeControllerMessageGo(filename);
     }
 }

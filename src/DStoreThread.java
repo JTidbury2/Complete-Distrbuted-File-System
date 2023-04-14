@@ -94,7 +94,7 @@ public class DStoreThread implements Runnable {
             public void run() {
                 while (info.isRebalanceFlag()) {
                     System.out.println("Rebalance watcher started");
-                    info.storeWait();
+                    info.rebalanceWait();
                     String files_to_remove = info.getRemoveFiles(port);
                     String files_to_send = info.getSendFiles(port);
 
