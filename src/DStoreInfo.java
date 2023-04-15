@@ -9,6 +9,8 @@ String storeMessage = null;
 
 private ArrayList<String> fileList = new ArrayList<>();
 
+Object rebalanceLock = new Object();
+
 private HashMap<String,Integer> fileSize = new HashMap<>();
 
 public void storeControllerMessage(){
@@ -62,5 +64,21 @@ public void storeControllerMessageGo(String message){
             }
             files.trim();
             return files;
+    }
+
+    public void rebalanceWait(){
+      synchronized(rebalanceLock) {
+        try {
+          rebalanceLock.wait();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+
+    public void rebalanceNotify(){
+      synchronized(rebalanceLock) {
+        rebalanceLock.notifyAll();
+      }
     }
 }

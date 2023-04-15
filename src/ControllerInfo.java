@@ -23,6 +23,10 @@ public class ControllerInfo {
     private HashMap<Integer, ArrayList<String>> newDstoreFileMap = new HashMap<Integer,
         ArrayList<String>>();
 
+    private HashMap<Integer, ArrayList<String>> new2DstoreFileMap = new HashMap<Integer,
+        ArrayList<String>>();
+
+
     private HashMap<Integer, ArrayList<String>> dstoreRemoveMap = new HashMap<Integer, ArrayList<String>>();
 
     private HashMap<Integer, ArrayList<Integer>> dstoreAddMap = new HashMap<Integer, ArrayList<Integer>>();
@@ -434,6 +438,12 @@ public class ControllerInfo {
         }
     }
 
+    public void setFileLoadTimes (String s, int times) {
+        synchronized (fileLock) {
+            fileLoadCount.put(s, times);
+        }
+    }
+
 
     public void updateDstoreFiles(String[] files, int port) {
         synchronized (fileLock) {
@@ -487,28 +497,32 @@ public class ControllerInfo {
     }
 
     public String getSendFiles(int port) {
-        synchronized (rebalanceLock) {
-            String result = "";
-            if (!dstoreNeedMap.containsKey(port)) {
-                System.out.println("No files to send");
-                return "";
-            }
-            int counter=0;
-            for (String file : dstoreFileMap.get(port)) {
-                String tempResult = "";
-                if (dstoreNeedMap.containsKey(file)) {
-                    counter++;
-                    for (int dstore : dstoreNeedMap.get(file)) {
-                        tempResult += dstore + " ";
-                    }
-                    tempResult = file + " " + dstoreNeedMap.get(file).size() + " " + tempResult;
-                    tempResult.trim();
-                    result += tempResult + " ";
+        synchronized (fileLock) {
+            synchronized (rebalanceLock) {
+                String result = "";
+                if (!new2DstoreFileMap.containsKey(port)) {
+                    System.out.println("No files to send");
+                    return "";
                 }
+                int counter = 0;
+                System.out.println("DstoreFileMap: " + new2DstoreFileMap);
+                System.out.println("DstoreNeedMap: " + dstoreNeedMap);
+                for (String file : new2DstoreFileMap.get(port)) {
+                    String tempResult = "";
+                    if (dstoreNeedMap.containsKey(file)) {
+                        counter++;
+                        for (int dstore : dstoreNeedMap.get(file)) {
+                            tempResult += dstore + " ";
+                        }
+                        tempResult = file + " " + dstoreNeedMap.get(file).size() + " " + tempResult;
+                        tempResult.trim();
+                        result += tempResult + " ";
+                    }
+                }
+                result = counter + " " + result;
+                result.trim();
+                return result;
             }
-            result = counter + " " + result;
-            result.trim();
-            return result;
         }
     }
 
@@ -528,6 +542,7 @@ public class ControllerInfo {
             createRemoveMap();
             createNeedMap();
             systemCheck(5);
+            new2DstoreFileMap = new HashMap<>(dstoreFileMap);
             fileDstoreMap = new HashMap<>(newFileDstoreMap);
             dstoreFileMap = new HashMap<>(newDstoreFileMap);
             systemCheck(6);

@@ -101,13 +101,18 @@ public class ClientMain {
 			if (fileList.length > 1) {
 				try { client.store(fileList[1]); } catch(IOException e) { e.printStackTrace(); }
 			}
-			/**
+
+			if (fileList.length > 2) {
+				try { client.store(fileList[2]); } catch(IOException e) { e.printStackTrace(); }
+			}
+
 			String list[] = null;
 			try { list = list(client); } catch(IOException e) { e.printStackTrace(); }
 			
 			if (list != null)
 				for (String filename : list)
 					try { client.load(filename, downloadFolder); } catch(IOException e) { e.printStackTrace(); }
+			/**
 			
 			if (list != null)
 				for (String filename : list)

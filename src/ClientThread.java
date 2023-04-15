@@ -27,6 +27,9 @@ public class ClientThread implements Runnable {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
         } else if (line.startsWith("RELOAD")||line.startsWith("LOAD")) {
+            if (line.startsWith("LOAD")){
+                info.setFileLoadTimes(line.split(" ")[1], 0);
+            }
             String[] input = line.split(" ");
             loadCommand(input[1], info.getFileLoadTimes(input[1]));
         } else if (line.startsWith("REMOVE")) {
@@ -61,6 +64,7 @@ public class ClientThread implements Runnable {
 
 
     private void storeCommand(String s, String s1) {
+        boolean watiFlag = true;
         System.out.println("Store command started");
         if (info.getFileIndex(s)== Index.REMOVE_IN_PROGRESS||info.getFileIndex(s) == Index.STORE_IN_PROGRESS) {
             System.out.println("Concurrency error");
@@ -73,8 +77,12 @@ public class ClientThread implements Runnable {
             message = info.storeTo(s);
         } catch (NotEnoughDstoresException e) {
             message = "ERROR_NOT_ENOUGH_DSTORES";
+            out.println(message);
+            return;
         } catch (FileAlreadyExistsException e) {
             message = "ERROR_FILE_ALREADY_EXISTS";
+            out.println(message);
+            return;
         }
         info.setFileIndex(s, Index.STORE_IN_PROGRESS);
         out.println(message);

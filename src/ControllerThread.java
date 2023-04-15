@@ -16,10 +16,14 @@ public class ControllerThread implements Runnable {
     PrintWriter out = null;
     BufferedReader in = null;
 
-    public ControllerThread(Socket controller, Socket dstoreIn, DStoreInfo infos) {
+    String folderName;
+
+    public ControllerThread(Socket controller, Socket dstoreIn, DStoreInfo infos,
+        String folderName) {
         this.controller = controller;
         this.dstoreIn = dstoreIn;
         info = infos;
+        this.folderName = folderName;
     }
 
     @Override
@@ -53,7 +57,10 @@ public class ControllerThread implements Runnable {
             removeFile(input[1]);
         } else if (line.startsWith("REBALANCE")) {
             System.out.println("Controller thread recieved " + line);
+            line=line.replaceAll("\\s+", " ");
+            System.out.println("Controller thread recieved " + line);
             String[] input = line.split(" ");
+
             rebalance(input);
 
         } else if (line.startsWith("LIST")){
@@ -85,6 +92,7 @@ public class ControllerThread implements Runnable {
                 amount = Integer.parseInt(s[counter + 1]);
                 for (int i = counter + 2; i < counter + 2 + amount; i++) {
                     rebalanceMessage(Integer.parseInt(s[i]), message, s[counter]);
+                    info.rebalanceWait();
                 }
                 counter = counter + 2 + amount;
                 addCurrent++;
@@ -123,7 +131,8 @@ public class ControllerThread implements Runnable {
                         System.out.println("Rebalance thread " + line);
                         if (line.startsWith("ACK")) {
                             OutputStream fileOut = socket.getOutputStream();
-                            File inputFile = new File(fileName);
+                            File folder = new File(System.getProperty("user.dir"), folderName);
+                            File inputFile = new File(folder,fileName);
                             FileInputStream inf = new FileInputStream(inputFile);
                             byte[] buf = new byte[1024];
                             int buflen;
@@ -131,18 +140,20 @@ public class ControllerThread implements Runnable {
                                 System.out.print("*");
                                 fileOut.write(buf, 0, buflen);
                             }
-                            fileOut.flush();
-                            fileOut.close();
+                            out.close();
                             inf.close();
+                            info.rebalanceNotify();
                         }
 
                     }
-                    out.close();
-                    in.close();
-                    socket.close();
+
+
                     System.out.println("rebalance connection closed");
+
                 } catch (IOException e) {
                     e.printStackTrace();
+                } catch (Exception e) {
+
                 }
             }
         }, "Rebalance Thread").start();
@@ -150,15 +161,17 @@ public class ControllerThread implements Runnable {
     }
 
     private void removeFile(String s) {
+
         if (!info.checkFileExist(s)) {
             out.println("ERROR_FILE_DOES_NOT_EXIST " + s);
         }
-        File file = new File(s);
+        File folder = new File(System.getProperty("user.dir"), folderName);
+        File file = new File(folder,s);
         if (file.delete()) {
             System.out.println("File deleted successfully");
             out.println("REMOVE_ACK " + s);
         } else {
-            System.out.println("Failed to delete the file");
+            System.out.println("Failed to delete the file "+s);
         }
         info.removeFile(s);
     }

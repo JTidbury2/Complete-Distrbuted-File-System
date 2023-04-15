@@ -99,9 +99,13 @@ public class DStoreThread implements Runnable {
                     info.rebalanceWait();
                     String files_to_remove = info.getRemoveFiles(port);
                     String files_to_send = info.getSendFiles(port);
-
-
-                    out.println("REBALANCE "+files_to_send+" " + files_to_remove);
+                    files_to_send.trim();
+                    files_to_remove.trim();
+                    System.out.println("TEST ME OUT PUNK");
+                    String message = "REBALANCE " + files_to_send + " " + files_to_remove;
+                    message.replaceAll("\\s+", " ");
+                    System.out.println("TEST ME OUT PUNK");
+                    out.println(message);
                 }
             }
         }, "Store Start Watcher Thread").start();

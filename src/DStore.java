@@ -94,7 +94,7 @@ public class DStore {
 
     private static void setUpControllerThread(Socket client, Socket client2) {
         System.out.println("ControllerThread "+client.getPort()+" started");
-        new Thread(new ControllerThread(client,client2, info),
+        new Thread(new ControllerThread(client,client2, info,fileFolder),
             "Controller Thread "+client.getPort()).start();
     }
 

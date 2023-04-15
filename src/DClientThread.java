@@ -66,6 +66,7 @@ public class DClientThread implements Runnable {
     }
 
     private void loadData(String fileName) throws IOException {
+        File folder = createFolder();
         System.out.println("DClient thread " + client.getPort() + " LOAD_DATA "+ fileName+" received");
         if (!info.checkFileExist(fileName)) {
             System.out.println("DSTore file does not exist");
@@ -75,7 +76,8 @@ public class DClientThread implements Runnable {
 
 
         try {
-            File inputFile = new File(fileName);
+
+            File inputFile = new File(folder,fileName);
             FileInputStream inf = new FileInputStream(inputFile);
             byte[] buf = new byte[1024];
             int buflen;
@@ -126,7 +128,6 @@ public class DClientThread implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        // TODO add file folder funcitonality
         info.addFile(filename);
         info.addFileSize(filename, size);
         info.storeControllerMessageGo(filename);
