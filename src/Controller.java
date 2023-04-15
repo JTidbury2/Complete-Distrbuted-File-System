@@ -4,6 +4,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Controller {
 
@@ -23,6 +25,16 @@ public class Controller {
         info.setRepFactor(repFactor);
         info.setTimeOut(timeOut);
         info.setRebalanceTime(rebalanceTime);
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("Rebalance timer started");
+                info.rebalance();
+                info.rebalanceStart();
+
+            }
+        },0, info.getRebalanceTime());
         setUpCPort();
     }
 

@@ -184,11 +184,6 @@ public class ControllerThread implements Runnable {
                 while (info.storeFlag) {
                     System.out.println("STORE_ACK watcher started");
                     info.storeControllerMessage();
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
                     out.println("STORE_ACK " + info.storeMessage);
                     System.out.println("STORE_ACK " + info.storeMessage);
                 }

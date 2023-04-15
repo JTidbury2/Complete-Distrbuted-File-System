@@ -363,6 +363,12 @@ public class ControllerInfo {
         }
     }
 
+    public boolean checkIndexPresent(String file) {
+        synchronized (fileLock) {
+            return fileIndex.containsKey(file);
+        }
+    }
+
     public void removeStart(String file) {
         synchronized (removeLock) {
             removeFile = file;

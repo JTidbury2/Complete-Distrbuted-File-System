@@ -4,6 +4,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class DStoreThread implements Runnable {
 
@@ -63,9 +65,11 @@ public class DStoreThread implements Runnable {
     }
 
     private void storeAckCommand(String line) {
-        String fileName = line.split(" ")[1];
-        info.updateFileDstores(fileName, port);
-        info.storeAck(fileName);
+        if (info.checkIndexPresent(line.split(" ")[1])) {
+            String fileName = line.split(" ")[1];
+            info.updateFileDstores(fileName, port);
+            info.storeAck(fileName);
+        }
     }
 
     private void removeAckCommand(String line) {
