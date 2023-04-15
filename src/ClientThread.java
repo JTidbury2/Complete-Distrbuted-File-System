@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.ArrayList;
 
 
 public class ClientThread implements Runnable {
@@ -21,6 +22,10 @@ public class ClientThread implements Runnable {
     }
 
     private void handleCommand(String line) {
+        if (info.getRebalanveTakingPlace()){
+            System.out.println("Rebalance taking place");
+            info.isRebalanceWait();
+        }
         if (line.startsWith("LIST")) {
             listCommand();
         } else if (line.startsWith("STORE")) {
@@ -88,6 +93,7 @@ public class ClientThread implements Runnable {
         out.println(message);
         System.out.println("Client thread " + client.getPort() + " returned " + message);
         info.storeWait();
+        //TODO add timeout features for recieinving all acks and sending store complete
         out.println("STORE_COMPLETE");
         System.out.println("Client thread " + client.getPort() + " returned STORE_COMPLETE");
     }
@@ -143,8 +149,10 @@ public class ClientThread implements Runnable {
             String line;
 
             while ((line = in.readLine()) != null) {
+
                 System.out.println("ClientThread" + client.getPort() + "received" + line);
                 handleCommand(line);
+
             }
             client.close();
             System.out.println("ClientThread " + client.getPort() + " connection closed");
@@ -153,6 +161,7 @@ public class ClientThread implements Runnable {
         }
     }
 
+
     private void startThreadWaiters() {
         new Thread(new Runnable() {
             @Override
@@ -160,6 +169,7 @@ public class ClientThread implements Runnable {
                 while (info.getRemoveAckFlag()) {
                     System.out.println("Remove ack watcher started");
                     info.removeAckWait();
+                    // TODO add timeout features for recieinving all acks and sending remove complete
                     out.println("REMOVE_COMPLETE");
                     System.out.println("REMOVE_COMPLETE");
                 }

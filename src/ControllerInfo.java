@@ -42,6 +42,10 @@ public class ControllerInfo {
     private ArrayList<Integer> reloadAck = new ArrayList<>();
 
     private HashMap<String, Integer> fileLoadCount = new HashMap<String, Integer>();
+
+    private boolean rebalanveTakingPlace = false;
+
+    private Object isRebalanceLock = new Object();
     private Object storeLock = new Object();
 
     private Object joinLock = new Object();
@@ -69,6 +73,58 @@ public class ControllerInfo {
     boolean rebalanceFlag = true;
 
     Object fileLock = new Object();
+
+    public boolean getRebalanveTakingPlace() {
+        return rebalanveTakingPlace;
+    }
+
+    public void setRebalanveTakingPlace(boolean flag) {
+        rebalanveTakingPlace = flag;
+    }
+
+    public void isRebalanceWait() {
+        synchronized (isRebalanceLock) {
+            try {
+                isRebalanceLock.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void isRebalanceNotify() {
+        synchronized (isRebalanceLock) {
+            isRebalanceLock.notifyAll();
+        }
+    }
+
+
+    public void rebalance() {
+        setRebalanveTakingPlace(true);
+        while(!checkIndex()){
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    private boolean checkIndex(){
+        boolean result = false;
+        if (fileIndex.size() == 0) {
+            return true;
+        }
+        for (String file : fileList) {
+            if (fileIndex.containsKey(file) && !(fileIndex.get(file) == Index.STORE_IN_PROGRESS)
+                && !(fileIndex.get(file) == Index.REMOVE_IN_PROGRESS)) {
+                result = true;
+            }
+
+        }
+        return result;
+    }
 
 
     public boolean checkFile(String fileName) throws NotEnoughDstoresException {
@@ -170,10 +226,6 @@ public class ControllerInfo {
         }
 
     }
-
-
-
-
 
 
     public void rebalanceStart() {
@@ -438,7 +490,7 @@ public class ControllerInfo {
         }
     }
 
-    public void setFileLoadTimes (String s, int times) {
+    public void setFileLoadTimes(String s, int times) {
         synchronized (fileLock) {
             fileLoadCount.put(s, times);
         }
@@ -550,17 +602,17 @@ public class ControllerInfo {
 
     }
 
-    private void systemCheck(int number){
+    private void systemCheck(int number) {
         System.out.println("*************************************");
-        System.out.println("FileList: "+number + fileList);
-        System.out.println("FileDstoreMap: "+number  + fileDstoreMap);
-        System.out.println("newFileDstoreMap: "+number  + newFileDstoreMap);
-        System.out.println("DstoreFileMap: "+number  + dstoreFileMap);
-        System.out.println("newDstoreFileMap: "+number  + newDstoreFileMap);
-        System.out.println("fileSizeMap: "+number  + fileSizeMap);
-        System.out.println("DstoreList: "+number  + dstoreList);
-        System.out.println("DstoreNeedMap: "+number  + dstoreNeedMap);
-        System.out.println("DstoreRemoveMap: "+number  + dstoreRemoveMap);
+        System.out.println("FileList: " + number + fileList);
+        System.out.println("FileDstoreMap: " + number + fileDstoreMap);
+        System.out.println("newFileDstoreMap: " + number + newFileDstoreMap);
+        System.out.println("DstoreFileMap: " + number + dstoreFileMap);
+        System.out.println("newDstoreFileMap: " + number + newDstoreFileMap);
+        System.out.println("fileSizeMap: " + number + fileSizeMap);
+        System.out.println("DstoreList: " + number + dstoreList);
+        System.out.println("DstoreNeedMap: " + number + dstoreNeedMap);
+        System.out.println("DstoreRemoveMap: " + number + dstoreRemoveMap);
         System.out.println("*************************************");
 
     }
@@ -571,7 +623,8 @@ public class ControllerInfo {
             if (newDstoreFileMap.containsKey(dstore)) {
                 ArrayList<String> files = new ArrayList<>(newDstoreFileMap.get(dstore));
                 for (String file : files) {
-                    if (!dstoreFileMap.containsKey(dstore)||!dstoreFileMap.get(dstore).contains(file) ) {
+                    if (!dstoreFileMap.containsKey(dstore) || !dstoreFileMap.get(dstore)
+                        .contains(file)) {
                         if (dstoreNeedMap.containsKey(file)) {
                             dstoreNeedMap.get(file).add(dstore);
                         } else {
@@ -646,6 +699,22 @@ public class ControllerInfo {
             }
         }
         return minDstore;
+    }
+
+    public void rebalanceComplete() {
+        synchronized (fileLock) {
+
+            reloadAck.add(1);
+            System.out.println("Reload ack size: " + reloadAck.size());
+            System.out.println("Dstore list size: " + dstoreList.size());
+            if (reloadAck.size() == dstoreList.size()) {
+                reloadAck.clear();
+                setRebalanveTakingPlace(false);
+                isRebalanceNotify();
+                System.out.println("Rebalance complete");
+            }
+            System.out.println("*********************************************");
+        }
     }
 }
 

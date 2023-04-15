@@ -30,11 +30,15 @@ public class DStoreThread implements Runnable {
             String[] files = Arrays.copyOfRange(input, 1, input.length);
             System.out.println("DStoreThread " + port + " recieved " + line);
             listCommand(files);
+        } else if (line.startsWith("REBALANCE_COMPLETE")){
+            System.out.println("DStoreThread " + port + " recieved " + line);
+            info.rebalanceComplete();
         }
 
     }
 
     private void listCommand(String[] files) {
+        info.rebalance();
         info.updateDstoreFiles(files, port);
         info.rebalanceStart();
     }
