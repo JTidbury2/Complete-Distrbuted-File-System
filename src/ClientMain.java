@@ -112,8 +112,7 @@ public class ClientMain {
 			if (list != null)
 				for (String filename : list)
 					try { client.load(filename, downloadFolder); } catch(IOException e) { e.printStackTrace(); }
-			/**
-			
+
 			if (list != null)
 				for (String filename : list)
 					try { client.remove(filename); } catch(IOException e) { e.printStackTrace(); }
@@ -121,7 +120,7 @@ public class ClientMain {
 				try { client.remove(list[0]); } catch(IOException e) { e.printStackTrace(); }
 			
 			try { list(client); } catch(IOException e) { e.printStackTrace(); }
-			 */
+
 			
 		} finally {
 			if (client != null)

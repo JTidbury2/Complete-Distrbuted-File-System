@@ -23,7 +23,7 @@ public class DClientThread implements Runnable {
     DStoreInfo info;
     String fileFolder;
 
-    public DClientThread(Socket client, String line, DStoreInfo infos,String fileFolder) {
+    public DClientThread(Socket client, String line, DStoreInfo infos, String fileFolder) {
         this.client = client;
         this.firstCommand = line;
         info = infos;
@@ -56,45 +56,13 @@ public class DClientThread implements Runnable {
     }
 
     private void handleCommand(String line) throws IOException {
-        if (line.startsWith("STORE")||line.startsWith("REBALANCE")) {
+        if (line.startsWith("STORE") || line.startsWith("REBALANCE")) {
             String[] input = line.split(" ");
             storeCommand(input[1], input[2]);
-        }else if (line.startsWith("LOAD_DATA")) {
+        } else if (line.startsWith("LOAD_DATA")) {
             String input = line.split(" ")[1];
             loadData(input);
         }
-    }
-
-    private void loadData(String fileName) throws IOException {
-        File folder = createFolder();
-        System.out.println("DClient thread " + client.getPort() + " LOAD_DATA "+ fileName+" received");
-        if (!info.checkFileExist(fileName)) {
-            System.out.println("DSTore file does not exist");
-            client.close();
-            return;
-        }
-
-
-        try {
-
-            File inputFile = new File(folder,fileName);
-            FileInputStream inf = new FileInputStream(inputFile);
-            byte[] buf = new byte[1024];
-            int buflen;
-            while ((buflen=inf.read(buf)) != -1){
-                System.out.print("*");
-                fileOut.write(buf,0,buflen);
-            }
-            inf.close();
-            System.out.println("DClient thread " + client.getPort() + " File sent");
-
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-
     }
 
     private void storeCommand(String filename, String filesize) {
@@ -113,7 +81,7 @@ public class DClientThread implements Runnable {
 
         System.out.println("DClient thread " + client.getPort() + " File received");
 
-        File outFile = new File(folder,filename);
+        File outFile = new File(folder, filename);
         try {
             outFile.createNewFile();
         } catch (IOException e) {
@@ -133,7 +101,40 @@ public class DClientThread implements Runnable {
         info.storeControllerMessageGo(filename);
     }
 
-    private File createFolder(){
+    private void loadData(String fileName) throws IOException {
+        File folder = createFolder();
+        System.out.println(
+            "DClient thread " + client.getPort() + " LOAD_DATA " + fileName + " received");
+        if (!info.checkFileExist(fileName)) {
+            System.out.println("DSTore file does not exist");
+            client.close();
+            return;
+        }
+
+        try {
+
+            File inputFile = new File(folder, fileName);
+            FileInputStream inf = new FileInputStream(inputFile);
+            byte[] buf = new byte[1024];
+            int buflen;
+            while ((buflen = inf.read(buf)) != -1) {
+                System.out.print("*");
+                fileOut.write(buf, 0, buflen);
+            }
+            inf.close();
+            System.out.println("DClient thread " + client.getPort() + " File sent");
+
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+
+
+    private File createFolder() {
         String folderName = fileFolder;
         File folder = new File(System.getProperty("user.dir"), folderName);
 

@@ -57,17 +57,33 @@ public class ControllerThread implements Runnable {
             removeFile(input[1]);
         } else if (line.startsWith("REBALANCE")) {
             System.out.println("Controller thread recieved " + line);
-            line=line.replaceAll("\\s+", " ");
+            line = line.replaceAll("\\s+", " ");
             System.out.println("Controller thread recieved " + line);
             String[] input = line.split(" ");
 
             rebalance(input);
 
-        } else if (line.startsWith("LIST")){
+        } else if (line.startsWith("LIST")) {
             System.out.println("Controller thread recieved " + line);
             System.out.println("Controller thread returned: LIST " + info.getFiles());
-            out.println("LIST "+ info.getFiles());
+            out.println("LIST " + info.getFiles());
         }
+    }
+
+    private void removeFile(String s) {
+
+        if (!info.checkFileExist(s)) {
+            out.println("ERROR_FILE_DOES_NOT_EXIST " + s);
+        }
+        File folder = new File(System.getProperty("user.dir"), folderName);
+        File file = new File(folder, s);
+        if (file.delete()) {
+            System.out.println("File deleted successfully");
+            out.println("REMOVE_ACK " + s);
+        } else {
+            System.out.println("Failed to delete the file " + s);
+        }
+        info.removeFile(s);
     }
 
     private void rebalance(String[] s) {
@@ -111,7 +127,7 @@ public class ControllerThread implements Runnable {
         }
         System.out.println("Rebalance complete");
         System.out.println("CHECK");
-        System.out.println("LIST OF FILES"+ info.getFiles());
+        System.out.println("LIST OF FILES" + info.getFiles());
         out.println("REBALANCE_COMPLETE");
     }
 
@@ -132,7 +148,7 @@ public class ControllerThread implements Runnable {
                         if (line.startsWith("ACK")) {
                             OutputStream fileOut = socket.getOutputStream();
                             File folder = new File(System.getProperty("user.dir"), folderName);
-                            File inputFile = new File(folder,fileName);
+                            File inputFile = new File(folder, fileName);
                             FileInputStream inf = new FileInputStream(inputFile);
                             byte[] buf = new byte[1024];
                             int buflen;
@@ -147,7 +163,6 @@ public class ControllerThread implements Runnable {
 
                     }
 
-
                     System.out.println("rebalance connection closed");
 
                 } catch (IOException e) {
@@ -160,21 +175,6 @@ public class ControllerThread implements Runnable {
 
     }
 
-    private void removeFile(String s) {
-
-        if (!info.checkFileExist(s)) {
-            out.println("ERROR_FILE_DOES_NOT_EXIST " + s);
-        }
-        File folder = new File(System.getProperty("user.dir"), folderName);
-        File file = new File(folder,s);
-        if (file.delete()) {
-            System.out.println("File deleted successfully");
-            out.println("REMOVE_ACK " + s);
-        } else {
-            System.out.println("Failed to delete the file "+s);
-        }
-        info.removeFile(s);
-    }
 
     private void startThreadWaiters() {
         new Thread(new Runnable() {
@@ -184,6 +184,11 @@ public class ControllerThread implements Runnable {
                 while (info.storeFlag) {
                     System.out.println("STORE_ACK watcher started");
                     info.storeControllerMessage();
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                     out.println("STORE_ACK " + info.storeMessage);
                     System.out.println("STORE_ACK " + info.storeMessage);
                 }

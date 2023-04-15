@@ -58,6 +58,8 @@ public class ControllerInfo {
 
     private String removeFile = null;
 
+    private String addFile = null;
+
     boolean removeAckFlag = true;
 
     boolean removeFlag = true;
@@ -98,10 +100,22 @@ public class ControllerInfo {
         }
     }
 
+    public void setAddFile(String file) {
+        addFile = file;
+    }
+
+    public String getAddFile() {
+        return addFile;
+    }
+
+    public void removeFileIndex(String file) {
+        fileIndex.remove(file);
+    }
+
 
     public void rebalance() {
         setRebalanveTakingPlace(true);
-        while(!checkIndex()){
+        while (!checkIndex()) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -111,7 +125,7 @@ public class ControllerInfo {
 
     }
 
-    private boolean checkIndex(){
+    private boolean checkIndex() {
         boolean result = false;
         if (fileIndex.size() == 0) {
             return true;

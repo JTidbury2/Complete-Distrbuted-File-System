@@ -27,13 +27,14 @@ public class Controller {
     }
 
     public static void setUpDstoreThread(Socket client, int port) {
-        System.out.println("DStoreThread"+port+" started");
-        new Thread(new DStoreThread(client, port, info),"DStore Thread "+port).start();
+        System.out.println("DStoreThread" + port + " started");
+        new Thread(new DStoreThread(client, port, info), "DStore Thread " + port).start();
     }
 
     public static void setUpClientThread(Socket client, String firstCommand) {
-        System.out.println("ClientThread "+client.getPort()+" started");
-        new Thread(new ClientThread(client, firstCommand, info),"Client Thread "+client.getPort()).start();
+        System.out.println("ClientThread " + client.getPort() + " started");
+        new Thread(new ClientThread(client, firstCommand, info),
+            "Client Thread " + client.getPort()).start();
     }
 
     private static void setUpCPort() {

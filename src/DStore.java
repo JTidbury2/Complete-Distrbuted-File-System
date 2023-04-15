@@ -38,6 +38,7 @@ public class DStore {
             e.printStackTrace();
         }
     }
+
     private static void setUpListenerPort() {
         try {
             ss = new ServerSocket(port);
@@ -59,7 +60,7 @@ public class DStore {
 
                             while ((line = in.readLine()) != null) {
                                 if (line.startsWith("LIST")) {
-                                    setUpControllerThread(controllerSocket,client);
+                                    setUpControllerThread(controllerSocket, client);
                                     System.out.println("Controller thread started");
                                     closeFlag = false;
                                     break;
@@ -88,17 +89,16 @@ public class DStore {
     }
 
     private static void setUpClientThread(Socket client, String line) {
-        System.out.println("ClientThread "+client.getPort()+" started");
-        new Thread(new DClientThread(client, line, info,fileFolder),"Client Thread "+client.getPort()).start();
+        System.out.println("ClientThread " + client.getPort() + " started");
+        new Thread(new DClientThread(client, line, info, fileFolder),
+            "Client Thread " + client.getPort()).start();
     }
 
     private static void setUpControllerThread(Socket client, Socket client2) {
-        System.out.println("ControllerThread "+client.getPort()+" started");
-        new Thread(new ControllerThread(client,client2, info,fileFolder),
-            "Controller Thread "+client.getPort()).start();
+        System.out.println("ControllerThread " + client.getPort() + " started");
+        new Thread(new ControllerThread(client, client2, info, fileFolder),
+            "Controller Thread " + client.getPort()).start();
     }
-
-
 
 
 }

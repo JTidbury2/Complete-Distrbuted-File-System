@@ -18,44 +18,6 @@ public class DStoreThread implements Runnable {
         info = infos;
     }
 
-    private void handleCommand(String line) {
-        if (line.startsWith("STORE_ACK")) {
-            System.out.println("DStoreThread " + port + " recieved " + line);
-            storeAckCommand(line);
-        } else if (line.startsWith("REMOVE_ACK")) {
-            System.out.println("DStoreThread " + port + " recieved " + line);
-            removeAckCommand(line);
-        } else if (line.startsWith("LIST")) {
-            String[] input = line.split(" ");
-            String[] files = Arrays.copyOfRange(input, 1, input.length);
-            System.out.println("DStoreThread " + port + " recieved " + line);
-            listCommand(files);
-        } else if (line.startsWith("REBALANCE_COMPLETE")){
-            System.out.println("DStoreThread " + port + " recieved " + line);
-            info.rebalanceComplete();
-        }
-
-    }
-
-    private void listCommand(String[] files) {
-        info.rebalance();
-        info.updateDstoreFiles(files, port);
-        info.rebalanceStart();
-    }
-
-
-    private void storeAckCommand(String line) {
-        String fileName = line.split(" ")[1];
-        info.updateFileDstores(fileName, port);
-        info.storeAck(fileName);
-    }
-
-    private void removeAckCommand(String line) {
-        String fileName = line.split(" ")[1];
-        info.removeAck(fileName);
-
-    }
-
     @Override
     public void run() {
         BufferedReader in = null;
@@ -79,6 +41,43 @@ public class DStoreThread implements Runnable {
             e.printStackTrace();
         }
 
+    }
+
+    private void handleCommand(String line) {
+        if (line.startsWith("STORE_ACK")) {
+            System.out.println("DStoreThread " + port + " recieved " + line);
+            storeAckCommand(line);
+        } else if (line.startsWith("REMOVE_ACK")) {
+            System.out.println("DStoreThread " + port + " recieved " + line);
+            removeAckCommand(line);
+        } else if (line.startsWith("LIST")) {
+            String[] input = line.split(" ");
+            String[] files = Arrays.copyOfRange(input, 1, input.length);
+            System.out.println("DStoreThread " + port + " recieved " + line);
+            listCommand(files);
+        } else if (line.startsWith("REBALANCE_COMPLETE")) {
+            System.out.println("DStoreThread " + port + " recieved " + line);
+            info.rebalanceComplete();
+        }
+
+    }
+
+    private void storeAckCommand(String line) {
+        String fileName = line.split(" ")[1];
+        info.updateFileDstores(fileName, port);
+        info.storeAck(fileName);
+    }
+
+    private void removeAckCommand(String line) {
+        String fileName = line.split(" ")[1];
+        info.removeAck(fileName);
+
+    }
+
+    private void listCommand(String[] files) {
+        info.rebalance();
+        info.updateDstoreFiles(files, port);
+        info.rebalanceStart();
     }
 
     private void startThreadWaiters() {
@@ -117,12 +116,12 @@ public class DStoreThread implements Runnable {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while(info.getListFlag()){
+                while (info.getListFlag()) {
                     System.out.println("List watcher started");
                     info.joinWait();
                     out.println("LIST");
                 }
             }
-        },"LIST Watcher thread").start();
+        }, "LIST Watcher thread").start();
     }
 }
