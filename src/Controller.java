@@ -98,7 +98,11 @@ public class Controller {
                     }
                 }).start();
             } catch (SocketException e) {
-                e.printStackTrace();
+                if (e.getMessage().equals("Connection reset")) {
+                    int localPort = ((Socket) e.getCause()).getLocalPort();
+                    System.out.println("The connection on port " + localPort + " was reset.");
+                    e.printStackTrace();
+                }
             }catch (IOException e){
                 e.printStackTrace();
             }

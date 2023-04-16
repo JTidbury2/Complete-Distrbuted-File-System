@@ -274,7 +274,7 @@ public class ControllerInfo {
             if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
             }
-            if (fileIndex.containsKey(name)) {
+            if (fileIndex.containsKey(name) && !(fileIndex.get(name) == Index.STORE_IN_PROGRESS)) {
                 throw new FileAlreadyExistsException(name);
             }
             Integer[] dstores = getStoreDStores();
@@ -337,19 +337,31 @@ public class ControllerInfo {
                 System.out.println("Remove complete");
                 removeAcks.clear();
                 setFileIndex(fileName, Index.REMOVE_COMPLETE);
-                fileList.remove(fileName);
-                fileIndex.remove(fileName);
-                fileDstoreMap.remove(fileName);
-                fileSizeMap.remove(fileName);
+                removeFileDstoreMap(fileName);
+                removeFileSizeMap(fileName);
+                removeFileLoadCount(fileName);
+                removeFileFileList(fileName);
+                removeDstoreFilemap(fileName);
                 fileLoadCount.remove(fileName);
-                for (Integer dstore : dstoreList) {
-                    if (dstoreFileMap.containsKey(dstore)) {
-                        dstoreFileMap.get(dstore).remove(fileName);
-                    }
-                }
                 removeAckStart();
             }
 
+        }
+    }
+
+    public void clearRemoveAcks() {
+        synchronized (fileLock) {
+            removeAcks.clear();
+        }
+    }
+
+    private void removeDstoreFilemap(String fileName) {
+        synchronized (fileLock) {
+            for (Integer dstore : dstoreList) {
+                if (dstoreFileMap.containsKey(dstore)) {
+                    dstoreFileMap.get(dstore).remove(fileName);
+                }
+            }
         }
     }
 
@@ -437,7 +449,7 @@ public class ControllerInfo {
     }
 
 
-    private void removeAckStart() {
+    public void removeAckStart() {
         synchronized (removeAckLock) {
             removeAckLock.notifyAll();
         }
@@ -521,7 +533,7 @@ public class ControllerInfo {
                 throw new FileDoesNotExistException();
             } else if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
-            } else if (fileDstoreMap.get(s).size() == times) {
+            } else if (fileDstoreMap.get(s).size() <= times) {
                 throw new DStoreCantRecieveException();
             }
             System.out.println("File: " + s + " Dstores: " + fileDstoreMap.get(s).get(times));
@@ -696,9 +708,27 @@ public class ControllerInfo {
                         }
                     }
                 }
+            } else {
+                //dstoreRemoveMap.put(dstore, dstoreFileMap.get(dstore));
             }
         }
 
+    }
+
+    public boolean checkIndexInProgress(String fileName,int command){
+        synchronized (fileLock) {
+            boolean result=(fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS
+                || fileIndex.get(fileName) == Index.STORE_IN_PROGRESS);
+            if (!result){
+                if (command==1){
+                    fileIndex.put(fileName, Index.REMOVE_IN_PROGRESS);
+                }else if (command==2){
+                    fileIndex.put(fileName, Index.STORE_IN_PROGRESS);
+                }
+            }
+
+            return result;
+        }
     }
 
     public void getRebalanceDstores(String file) {
@@ -745,6 +775,17 @@ public class ControllerInfo {
             System.out.println("Reload ack size: " + reloadAck.size());
             System.out.println("Dstore list size: " + dstoreList.size());
             if (reloadAck.size() == dstoreList.size()) {
+                for(String file:fileList){
+                    if (fileIndex.get(file) == Index.REMOVE_IN_PROGRESS) {
+                        setFileIndex(file, Index.REMOVE_COMPLETE);
+                        removeFileDstoreMap(file);
+                        removeFileSizeMap(file);
+                        removeFileLoadCount(file);
+                        removeFileFileList(file);
+                        removeDstoreFilemap(file);
+                        fileLoadCount.remove(file);
+                    }
+                }
                 reloadAck.clear();
                 setRebalanveTakingPlace(false);
                 isRebalanceNotify();

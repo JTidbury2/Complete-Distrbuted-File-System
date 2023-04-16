@@ -92,10 +92,8 @@ public class ClientThread implements Runnable {
     }
 
     private void storeCommand(String s, String s1) {
-        boolean watiFlag = true;
         System.out.println("Store command started");
-        if (info.getFileIndex(s) == Index.REMOVE_IN_PROGRESS
-            || info.getFileIndex(s) == Index.STORE_IN_PROGRESS) {
+        if (info.checkIndexInProgress(s,2)) {
             System.out.println("Concurrency error");
             out.println("ERROR_FILE_ALREADY_EXISTS");
             return;
@@ -113,7 +111,6 @@ public class ClientThread implements Runnable {
             out.println(message);
             return;
         }
-        info.setFileIndex(s, Index.STORE_IN_PROGRESS);
         out.println(message);
         System.out.println("Client thread " + client.getPort() + " returned " + message);
         storeComplete = true;
@@ -147,22 +144,18 @@ public class ClientThread implements Runnable {
 
     private void loadCommand(String s, int times) {
         System.out.println("Load command started");
-        if (info.getFileIndex(s) == Index.REMOVE_IN_PROGRESS
-            || info.getFileIndex(s) == Index.STORE_IN_PROGRESS) {
+        if (info.checkIndexInProgress(s,3)) {
             System.out.println("Concurrency error");
             out.println("ERROR_FILE_DOES_NOT_EXIST");
             return;
         }
         try {
-            System.out.println("0");
             int[] fileInfo = info.getFileDStores(s, times);
             int port = fileInfo[0];
             int filesize = fileInfo[1];
             String message = "LOAD_FROM " + port + " " + filesize;
-            System.out.println("1");
             System.out.println(message);
             out.println(message);
-            System.out.println("3");
         } catch (NotEnoughDstoresException e) {
             out.println("ERROR_NOT_ENOUGH_DSTORES");
         } catch (FileDoesNotExistException e) {
@@ -174,17 +167,13 @@ public class ClientThread implements Runnable {
 
     private void removeCommand(String fileName) {
         removeTimout = false;
-        if (info.getFileIndex(fileName) == Index.REMOVE_IN_PROGRESS
-            || info.getFileIndex(fileName) == Index.STORE_IN_PROGRESS) {
+        if (info.checkIndexInProgress(fileName,1)) {
             out.println("ERROR_FILE_DOES_NOT_EXIST");
             return;
         }
         try {
             if (info.checkFile(fileName)) {
                 info.removeFileFileList(fileName);
-                info.removeFileDstoreMap(fileName);
-                info.removeFileSizeMap(fileName);
-                info.removeFileLoadCount(fileName);
                 info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
                 System.out.println(
                     "Client thread " + client.getPort() + " received REMOVE " + fileName);
@@ -192,6 +181,8 @@ public class ClientThread implements Runnable {
                     @Override
                     public void run() {
                         setRemoveTimeout(true);
+                        info.clearRemoveAcks();
+                        info.removeAckStart();
                     }
                 }, info.getTimeOut());
                 info.removeStart(fileName);
