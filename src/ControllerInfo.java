@@ -113,14 +113,40 @@ public class ControllerInfo {
     }
 
 
-    public void rebalance() {
-        setRebalanveTakingPlace(true);
-        while (!checkIndex()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+    public void rebalance(String[] files, int port) {
+        synchronized (rebalanceLock) {
+            System.out.println("Rebalance started");
+            setRebalanveTakingPlace(true);
+            while (!checkIndex()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
+            for (String file : files) {
+                if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)) {
+                    fileDstoreMap.get(file).add(port);
+                } else {
+                    ArrayList<Integer> dstores = new ArrayList<Integer>();
+                    dstores.add(port);
+                    fileDstoreMap.put(file, dstores);
+                }
+                if (dstoreFileMap != null && dstoreFileMap.containsKey(port)) {
+                    dstoreFileMap.get(port).add(file);
+                } else {
+                    ArrayList<String> filesList = new ArrayList<String>();
+                    filesList.add(file);
+                    dstoreFileMap.put(port, filesList);
+                }
+
+
+            }
+            synchronized (rebalanceLock) {
+                rebalanceDStores();
+                rebalanceLock.notifyAll();
+            }
+            System.out.println("Rebalance ended");
         }
 
     }
