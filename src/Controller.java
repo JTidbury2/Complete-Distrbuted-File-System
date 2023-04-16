@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -34,14 +35,15 @@ public class Controller {
                 info.rebalance(new String[0],0);
 
             }
-        },0, info.getRebalanceTime());
+        },info.getRebalanceTime(), info.getRebalanceTime());
         setUpCPort();
     }
 
     public static void setUpDstoreThread(Socket client, int port) {
         System.out.println("DStoreThread" + port + " started");
 
-            new Thread(new DStoreThread(client, port, info), "DStore Thread " + port).start();
+                new Thread(new DStoreThread(client, port, info), "DStore Thread " + port).start();
+
 
     }
 
@@ -95,7 +97,9 @@ public class Controller {
                         }
                     }
                 }).start();
-            } catch (IOException e) {
+            } catch (SocketException e) {
+                e.printStackTrace();
+            }catch (IOException e){
                 e.printStackTrace();
             }
 

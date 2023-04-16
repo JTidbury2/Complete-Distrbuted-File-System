@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -24,6 +25,14 @@ public class DStore {
         timeOut = Integer.parseInt(args[2]);
         fileFolder = args[3];
         System.out.println("DStore " + port + " started");
+        File folder = new File(System.getProperty("user.dir"), fileFolder);
+        if (!folder.exists()) {
+            folder.mkdir();
+        }
+        File[] flist = folder.listFiles();
+        for (File file:flist){
+            file.delete();
+        }
         connectToController();
         System.out.println("DStore " + port + " connected to controller");
         setUpListenerPort();
