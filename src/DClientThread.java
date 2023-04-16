@@ -56,16 +56,20 @@ public class DClientThread implements Runnable {
     }
 
     private void handleCommand(String line) throws IOException {
-        if (line.startsWith("STORE") || line.startsWith("REBALANCE")) {
+        if (line.startsWith("STORE") ) {
             String[] input = line.split(" ");
-            storeCommand(input[1], input[2]);
-        } else if (line.startsWith("LOAD_DATA")) {
+            storeCommand(input[1], input[2],true);
+        } else if (line.startsWith("REBALANCE")) {
+            String[] input = line.split(" ");
+            storeCommand(input[1], input[2],false);
+        }else if (line.startsWith("LOAD_DATA")) {
             String input = line.split(" ")[1];
             loadData(input);
         }
     }
 
-    private void storeCommand(String filename, String filesize) {
+    private void storeCommand(String filename, String filesize, boolean isStore) {
+
         File folder = createFolder();
 
         out.println("ACK");
@@ -82,6 +86,10 @@ public class DClientThread implements Runnable {
         System.out.println("DClient thread " + client.getPort() + " File received");
 
         File outFile = new File(folder, filename);
+        if(outFile.exists()){
+            System.out.println("DClient thread " + client.getPort() + " File already exists");
+            return;
+        }
         try {
             outFile.createNewFile();
         } catch (IOException e) {
@@ -98,7 +106,9 @@ public class DClientThread implements Runnable {
         }
         info.addFile(filename);
         info.addFileSize(filename, size);
-        info.storeControllerMessageGo(filename);
+        if (isStore) {
+            info.storeControllerMessageGo(filename);
+        }
     }
 
     private void loadData(String fileName) throws IOException {

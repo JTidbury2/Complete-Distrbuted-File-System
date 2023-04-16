@@ -48,6 +48,9 @@ public void storeControllerMessageGo(String message){
   }
 
     public void addFile(String file) {
+        if (fileList.contains(file)) {
+            return;
+        }
         fileList.add(file);
     }
 
