@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -40,7 +41,9 @@ public class Controller {
 
     public static void setUpDstoreThread(Socket client, int port) {
         System.out.println("DStoreThread" + port + " started");
-        new Thread(new DStoreThread(client, port, info), "DStore Thread " + port).start();
+
+            new Thread(new DStoreThread(client, port, info), "DStore Thread " + port).start();
+
     }
 
     public static void setUpClientThread(Socket client, String firstCommand) {

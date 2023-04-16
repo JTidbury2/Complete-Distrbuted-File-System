@@ -194,11 +194,34 @@ public class ControllerInfo {
 
     public Integer[] getStoreDStores() {
         synchronized (fileLock) {
-            Integer[] dstores = new Integer[repFactor];
-            dstores = dstoreList.subList(0, repFactor).toArray(dstores);
-            return dstores;
+            ArrayList<Integer> currentDstores = new ArrayList<>();
+            ArrayList<Integer> allDstores = new ArrayList<>(dstoreList);
+            for (int k = 0; k < repFactor; k++) {
+                Integer minDstore = getMinStoreDstore(allDstores);
+                currentDstores.add(minDstore);
+                allDstores.remove(minDstore);
+            }
+            System.out.println(("All dstores are " + allDstores));
+            System.out.println("Current Dstores are " + currentDstores);
+            System.out.println("dstoreFileMap is " + dstoreFileMap);
+            return currentDstores.toArray(new Integer[0]);
         }
     }
+
+    public Integer getMinStoreDstore(ArrayList<Integer> dstoreList) {
+        //TODO start again stores
+        Integer min = dstoreFileMap.getOrDefault(dstoreList.get(0), new ArrayList<>()).size();
+        Integer minDstore = dstoreList.get(0);
+        for (int dstore : dstoreList) {
+            if (dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size() < min) {
+                min = dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size();
+                minDstore = dstore;
+            }
+        }
+        return minDstore;
+    }
+
+
 
     public String getRemoveFile() {
         return removeFile;
@@ -611,6 +634,8 @@ public class ControllerInfo {
                 getRebalanceDstores(file);
             }
             systemCheck(4);
+            dstoreNeedMap.clear();
+            dstoreRemoveMap.clear();
             createRemoveMap();
             createNeedMap();
             systemCheck(5);

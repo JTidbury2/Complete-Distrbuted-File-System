@@ -24,6 +24,7 @@ public class DStoreThread implements Runnable {
     public void run() {
         BufferedReader in = null;
         try {
+            System.out.println("DStoreThread " + port + " started properly");
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(new Socket("localhost", port).getOutputStream(), true);
@@ -108,24 +109,13 @@ public class DStoreThread implements Runnable {
                     String files_to_send = info.getSendFiles(port);
                     files_to_send.trim();
                     files_to_remove.trim();
-                    System.out.println("TEST ME OUT PUNK");
                     String message = "REBALANCE " + files_to_send + " " + files_to_remove;
                     message.replaceAll("\\s+", " ");
-                    System.out.println("TEST ME OUT PUNK");
                     out.println(message);
                 }
             }
         }, "Store Start Watcher Thread").start();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (info.getListFlag()) {
-                    System.out.println("List watcher started");
-                    info.joinWait();
-                    out.println("LIST");
-                }
-            }
-        }, "LIST Watcher thread").start();
+
     }
 }
