@@ -90,7 +90,7 @@ public class ClientMain {
 			client = new Client(cport, timeout, Logger.LoggingType.ON_FILE_AND_TERMINAL);
 		
 			try { client.connect(); } catch(IOException e) { e.printStackTrace(); return; }
-			/**
+
 			
 			try { list(client); } catch(IOException e) { e.printStackTrace(); }
 			
@@ -106,7 +106,7 @@ public class ClientMain {
 			if (fileList.length > 2) {
 				try { client.store(fileList[2]); } catch(IOException e) { e.printStackTrace(); }
 			}
-			 */
+
 			String list[] = null;
 			try { list = list(client); } catch(IOException e) { e.printStackTrace(); }
 			
@@ -117,11 +117,11 @@ public class ClientMain {
 			if (list != null)
 				for (String filename : list)
 					try { client.remove(filename); } catch(IOException e) { e.printStackTrace(); }
-			*/
+
 			if (list != null && list.length > 0)
 				try { client.remove(list[0]); } catch(IOException e) { e.printStackTrace(); }
 
-
+			*/
 			try { list(client); } catch(IOException e) { e.printStackTrace(); }
 
 			

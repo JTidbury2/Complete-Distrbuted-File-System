@@ -63,25 +63,28 @@ public class ControllerInfo {
     boolean removeAckFlag = true;
 
     boolean removeFlag = true;
-
-    public boolean isRebalanceFlag() {
-        return rebalanceFlag;
-    }
-
-    public void setRebalanceFlag(boolean rebalanceFlag) {
-        this.rebalanceFlag = rebalanceFlag;
-    }
-
     boolean rebalanceFlag = true;
 
     Object fileLock = new Object();
 
+    public boolean isRebalanceFlag() {
+        synchronized (fileLock) {
+            return rebalanceFlag;
+        }
+    }
+
+
     public boolean getRebalanveTakingPlace() {
-        return rebalanveTakingPlace;
+        synchronized (fileLock) {
+            return rebalanveTakingPlace;
+        }
+
     }
 
     public void setRebalanveTakingPlace(boolean flag) {
-        rebalanveTakingPlace = flag;
+        synchronized (fileLock) {
+            rebalanveTakingPlace = flag;
+        }
     }
 
     public void isRebalanceWait() {
@@ -92,6 +95,7 @@ public class ControllerInfo {
                 e.printStackTrace();
             }
         }
+
     }
 
     public void isRebalanceNotify() {
@@ -100,20 +104,15 @@ public class ControllerInfo {
         }
     }
 
-    public void setAddFile(String file) {
-        addFile = file;
-    }
-
-    public String getAddFile() {
-        return addFile;
-    }
-
     public void removeFileIndex(String file) {
-        fileIndex.remove(file);
+        synchronized (fileLock) {
+            fileIndex.remove(file);
+        }
     }
 
 
-    public void rebalance() {
+    public void rebalance(String[] files, int port) {
+        synchronized (fileLock) {
         setRebalanveTakingPlace(true);
         while (!checkIndex()) {
             try {
@@ -123,21 +122,48 @@ public class ControllerInfo {
             }
         }
 
+            for (String file : files) {
+                if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)) {
+                    fileDstoreMap.get(file).add(port);
+                } else {
+                    ArrayList<Integer> dstores = new ArrayList<Integer>();
+                    dstores.add(port);
+                    fileDstoreMap.put(file, dstores);
+                }
+                if (dstoreFileMap != null && dstoreFileMap.containsKey(port)) {
+                    dstoreFileMap.get(port).add(file);
+                } else {
+                    ArrayList<String> filesList = new ArrayList<String>();
+                    filesList.add(file);
+                    dstoreFileMap.put(port, filesList);
+                }
+
+
+            }
+
+
+        synchronized (rebalanceLock) {
+            rebalanceDStores();
+            rebalanceLock.notifyAll();
+        }
+        }
     }
 
     private boolean checkIndex() {
-        boolean result = false;
-        if (fileIndex.size() == 0) {
-            return true;
-        }
-        for (String file : fileList) {
-            if (fileIndex.containsKey(file) && !(fileIndex.get(file) == Index.STORE_IN_PROGRESS)
-                && !(fileIndex.get(file) == Index.REMOVE_IN_PROGRESS)) {
-                result = true;
+        synchronized (fileLock) {
+            boolean result = false;
+            if (fileIndex.size() == 0) {
+                return true;
             }
+            for (String file : fileList) {
+                if (fileIndex.containsKey(file) && !(fileIndex.get(file) == Index.STORE_IN_PROGRESS)
+                    && !(fileIndex.get(file) == Index.REMOVE_IN_PROGRESS)) {
+                    result = true;
+                }
 
+            }
+            return result;
         }
-        return result;
     }
 
 
@@ -151,27 +177,29 @@ public class ControllerInfo {
     }
 
     public boolean getRemoveAckFlag() {
-        return removeAckFlag;
-    }
-
-    public void setRemoveAckFlag(boolean flag) {
-        removeAckFlag = flag;
+        synchronized (fileLock) {
+            return removeAckFlag;
+        }
     }
 
     public boolean getRemoveFlag() {
-        return removeFlag;
+        synchronized (fileLock) {
+            return removeFlag;
+        }
     }
 
     public void updateFileDstores(String fileName, Integer dstore) {
         synchronized (fileLock) {
-            if (fileDstoreMap.containsKey(fileName)&& !fileDstoreMap.get(fileName).contains(dstore)) {
+            if (fileDstoreMap.containsKey(fileName) && !fileDstoreMap.get(fileName)
+                .contains(dstore)) {
                 fileDstoreMap.get(fileName).add(dstore);
-            } else if(!fileDstoreMap.containsKey(fileName)) {
+            } else if (!fileDstoreMap.containsKey(fileName)) {
                 ArrayList<Integer> dstores = new ArrayList<Integer>();
                 dstores.add(dstore);
                 fileDstoreMap.put(fileName, dstores);
             }
-            if (dstoreFileMap.containsKey(dstore) && !dstoreFileMap.get(dstore).contains(fileName)) {
+            if (dstoreFileMap.containsKey(dstore) && !dstoreFileMap.get(dstore)
+                .contains(fileName)) {
                 dstoreFileMap.get(dstore).add(fileName);
             } else if (!dstoreFileMap.containsKey(dstore)) {
                 ArrayList<String> files = new ArrayList<String>();
@@ -179,10 +207,6 @@ public class ControllerInfo {
                 dstoreFileMap.put(dstore, files);
             }
         }
-    }
-
-    public boolean getListFlag() {
-        return listFlag;
     }
 
     public void updateFileSize(String fileName, Integer size) {
@@ -206,22 +230,25 @@ public class ControllerInfo {
     }
 
     public Integer getMinStoreDstore(ArrayList<Integer> dstoreList) {
-        //TODO start again stores
-        Integer min = dstoreFileMap.getOrDefault(dstoreList.get(0), new ArrayList<>()).size();
-        Integer minDstore = dstoreList.get(0);
-        for (int dstore : dstoreList) {
-            if (dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size() < min) {
-                min = dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size();
-                minDstore = dstore;
+        synchronized (fileLock) {
+            //TODO start again stores
+            Integer min = dstoreFileMap.getOrDefault(dstoreList.get(0), new ArrayList<>()).size();
+            Integer minDstore = dstoreList.get(0);
+            for (int dstore : dstoreList) {
+                if (dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size() < min) {
+                    min = dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size();
+                    minDstore = dstore;
+                }
             }
+            return minDstore;
         }
-        return minDstore;
     }
 
 
-
     public String getRemoveFile() {
-        return removeFile;
+        synchronized (fileLock) {
+            return removeFile;
+        }
     }
 
 
@@ -474,13 +501,6 @@ public class ControllerInfo {
 
     }
 
-    public ArrayList<Integer> getDstoreList() {
-        return dstoreList;
-    }
-
-    public void setDstoreList(ArrayList<Integer> dstoreList) {
-        this.dstoreList = dstoreList;
-    }
 
     public void addDstore(int dstore) {
         synchronized (fileLock) {
@@ -550,15 +570,7 @@ public class ControllerInfo {
         }
     }
 
-    public void removeDstoreFiles(String[] files, int port) {
-        synchronized (fileLock) {
-            for (String file : files) {
-                if (fileDstoreMap.containsKey(file) && fileDstoreMap.get(file).contains(port)) {
-                    fileDstoreMap.get(file).remove((Integer) port);
-                }
-            }
-        }
-    }
+
 
     public String getRemoveFiles(int port) {
         synchronized (rebalanceLock) {
@@ -654,7 +666,8 @@ public class ControllerInfo {
                 for (String file : files) {
                     if (!dstoreFileMap.containsKey(dstore) || !dstoreFileMap.get(dstore)
                         .contains(file)) {
-                        if (dstoreNeedMap.containsKey(file)&& !dstoreNeedMap.get(file).contains(dstore)) {
+                        if (dstoreNeedMap.containsKey(file) && !dstoreNeedMap.get(file)
+                            .contains(dstore)) {
                             dstoreNeedMap.get(file).add(dstore);
                         } else {
                             ArrayList<Integer> needFiles = new ArrayList<>();
@@ -672,10 +685,11 @@ public class ControllerInfo {
             if (newDstoreFileMap.containsKey(dstore)) {
                 ArrayList<String> files = new ArrayList<>(dstoreFileMap.get(dstore));
                 for (String file : files) {
-                    if (!newDstoreFileMap.get(dstore).contains(file) ) {
-                        if (dstoreRemoveMap.containsKey(dstore)&& !dstoreRemoveMap.get(dstore).contains(file)) {
+                    if (!newDstoreFileMap.get(dstore).contains(file)) {
+                        if (dstoreRemoveMap.containsKey(dstore) && !dstoreRemoveMap.get(dstore)
+                            .contains(file)) {
                             dstoreRemoveMap.get(dstore).add(file);
-                        } else if (!dstoreRemoveMap.containsKey(dstore)){
+                        } else if (!dstoreRemoveMap.containsKey(dstore)) {
                             ArrayList<String> removeFiles = new ArrayList<>();
                             removeFiles.add(file);
                             dstoreRemoveMap.put(dstore, removeFiles);

@@ -80,9 +80,7 @@ public class DStoreThread implements Runnable {
     }
 
     private void listCommand(String[] files) {
-        info.rebalance();
-        info.updateDstoreFiles(files, port);
-        info.rebalanceStart();
+        info.rebalance(files, port);
     }
 
     private void startThreadWaiters() {
