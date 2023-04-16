@@ -739,8 +739,9 @@ public class ControllerInfo {
 
     public void rebalanceComplete() {
         synchronized (fileLock) {
+            if(getRebalanveTakingPlace()){
 
-            reloadAck.add(1);
+            reloadAck.add(1);}
             System.out.println("Reload ack size: " + reloadAck.size());
             System.out.println("Dstore list size: " + dstoreList.size());
             if (reloadAck.size() == dstoreList.size()) {
@@ -750,6 +751,17 @@ public class ControllerInfo {
                 System.out.println("Rebalance complete");
             }
 
+        }
+    }
+
+    public void rebalanceTimout(){
+        synchronized (fileLock) {
+            if(getRebalanveTakingPlace()){
+                reloadAck.clear();
+                setRebalanveTakingPlace(false);
+                isRebalanceNotify();
+                System.out.println("Rebalance timeout");
+            }
         }
     }
 }

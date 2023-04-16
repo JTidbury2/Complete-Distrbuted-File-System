@@ -9,6 +9,10 @@ import java.util.TimerTask;
 
 public class DStoreThread implements Runnable {
 
+    Timer rebalanceTimer = new Timer();
+
+    boolean rebalanceTimout = false;
+
     private Socket client;
     int port;
     ControllerInfo info;
@@ -110,10 +114,29 @@ public class DStoreThread implements Runnable {
                     String message = "REBALANCE " + files_to_send + " " + files_to_remove;
                     message.replaceAll("\\s+", " ");
                     out.println(message);
+                    rebalanceTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            info.rebalanceTimout();
+                        }
+                    }, info.getTimeOut());
+
                 }
             }
         }, "Store Start Watcher Thread").start();
 
 
+    }
+
+    private boolean getRebalanceTimout() {
+        synchronized (this){
+            return rebalanceTimout;
+        }
+    }
+
+    private void setRebalanceTimout(boolean value) {
+        synchronized (this){
+            rebalanceTimout = value;
+        }
     }
 }

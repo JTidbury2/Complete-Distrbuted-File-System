@@ -11,6 +11,13 @@ import java.util.TimerTask;
 
 public class ClientThread implements Runnable {
 
+    Timer removeTimer = new Timer();
+
+    boolean removeTimout = false;
+
+
+
+
     Socket client;
     String firstCommand;
     ControllerInfo info;
@@ -166,6 +173,7 @@ public class ClientThread implements Runnable {
     }
 
     private void removeCommand(String fileName) {
+        removeTimout = false;
         if (info.getFileIndex(fileName) == Index.REMOVE_IN_PROGRESS
             || info.getFileIndex(fileName) == Index.STORE_IN_PROGRESS) {
             out.println("ERROR_FILE_DOES_NOT_EXIST");
@@ -180,6 +188,12 @@ public class ClientThread implements Runnable {
                 info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
                 System.out.println(
                     "Client thread " + client.getPort() + " received REMOVE " + fileName);
+                removeTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        setRemoveTimeout(true);
+                    }
+                }, info.getTimeOut());
                 info.removeStart(fileName);
             } else {
                 out.println("ERROR_FILE_DOES_NOT_EXIST");
@@ -189,6 +203,19 @@ public class ClientThread implements Runnable {
 
         }
     }
+    private boolean getRemoveTimeout() {
+        synchronized (this) {
+            return removeTimout;
+        }
+    }
+
+    private void setRemoveTimeout(boolean removeTimout) {
+        synchronized (this) {
+            this.removeTimout = removeTimout;
+        }
+    }
+
+
 
     private void startThreadWaiters() {
         new Thread(new Runnable() {
@@ -197,9 +224,14 @@ public class ClientThread implements Runnable {
                 while (info.getRemoveAckFlag()) {
                     System.out.println("Remove ack watcher started");
                     info.removeAckWait();
+                    removeTimer.cancel();
                     // TODO add timeout features for recieinving all acks and sending remove complete
-                    out.println("REMOVE_COMPLETE");
-                    System.out.println("REMOVE_COMPLETE");
+                    if (!getRemoveTimeout()) {
+                        out.println("REMOVE_COMPLETE");
+                        System.out.println("Client thread " + client.getPort() + " returned REMOVE_COMPLETE");
+                    } else {
+                        System.out.println("TIMEOUT ON REMOVE");
+                    }
                 }
             }
         }, "Remove Ack Thread").start();
