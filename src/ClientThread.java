@@ -161,7 +161,7 @@ public class ClientThread implements Runnable {
                 @Override
                 public void run() {
                     setRemoveTimeout(true);
-                    info.clearRemoveAcks();
+                    info.clearRemoveAcks(fileName);
                     info.removeAckStart();
                     System.out.println("TIMEOUT ON REMOVE");
                 }

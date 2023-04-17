@@ -106,6 +106,7 @@ public class ControllerInfo {
 
     public void removeFileIndex(String file) {
         synchronized (fileLock) {
+            storeAcks.remove(file);
             fileIndex.remove(file);
         }
     }
@@ -334,7 +335,7 @@ public class ControllerInfo {
             }
             if (removeAcks.get(fileName).size() == repFactor) {
                 System.out.println("Remove complete");
-                removeAcks.clear();
+                removeAcks.remove(fileName);
                 setFileIndex(fileName, Index.REMOVE_COMPLETE);
                 removeFileDstoreMap(fileName);
                 removeFileSizeMap(fileName);
@@ -348,9 +349,9 @@ public class ControllerInfo {
         }
     }
 
-    public void clearRemoveAcks() {
+    public void clearRemoveAcks(String fileName) {
         synchronized (fileLock) {
-            removeAcks.clear();
+            removeAcks.remove(fileName);
         }
     }
 
@@ -402,7 +403,7 @@ public class ControllerInfo {
             }
             if (storeAcks.get(file).size() == repFactor) {
                 System.out.println("Store complete");
-                storeAcks.clear();
+                storeAcks.remove(file);
                 setFileIndex(file, Index.STORE_COMPLETE);
                 fileList.add(file);
                 storeComplete();
