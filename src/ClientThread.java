@@ -16,8 +16,6 @@ public class ClientThread implements Runnable {
     boolean removeTimout = false;
 
 
-
-
     Socket client;
     String firstCommand;
     ControllerInfo info;
@@ -58,10 +56,7 @@ public class ClientThread implements Runnable {
     }
 
     private void handleCommand(String line) {
-        if (info.getRebalanveTakingPlace()) {
-            System.out.println("Rebalance taking place");
-            info.isRebalanceWait();
-        }
+        info.checkRebalanceTakingPlace();
         if (line.startsWith("LIST")) {
             listCommand();
         } else if (line.startsWith("STORE")) {
@@ -69,10 +64,10 @@ public class ClientThread implements Runnable {
             storeCommand(input[1], input[2]);
         } else if (line.startsWith("RELOAD") || line.startsWith("LOAD")) {
             if (line.startsWith("LOAD")) {
-                info.setFileLoadTimes(line.split(" ")[1], 0);
+                info.setFileLoadTimes(line.split(" ")[1] + client.getPort(), 0);
             }
             String[] input = line.split(" ");
-            loadCommand(input[1], info.getFileLoadTimes(input[1]));
+            loadCommand(input[1], info.getFileLoadTimes(input[1]+ client.getPort()) );
         } else if (line.startsWith("REMOVE")) {
             String[] input = line.split(" ");
             removeCommand(input[1]);
@@ -91,17 +86,11 @@ public class ClientThread implements Runnable {
         System.out.println("Client thread returned" + message);
     }
 
-    private void storeCommand(String s, String s1) {
+    private void storeCommand(String fileName, String fileSize) {
         System.out.println("Store command started");
-        if (info.checkIndexInProgress(s,2)) {
-            System.out.println("Concurrency error");
-            out.println("ERROR_FILE_ALREADY_EXISTS");
-            return;
-        }
-        info.updateFileSize(s, Integer.parseInt(s1));
         String message = null;
         try {
-            message = info.storeTo(s);
+            message = info.clientStoreCommand(fileName, fileSize);
         } catch (NotEnoughDstoresException e) {
             message = "ERROR_NOT_ENOUGH_DSTORES";
             out.println(message);
@@ -119,7 +108,7 @@ public class ClientThread implements Runnable {
             @Override
             public void run() {
                 storeComplete = false;
-                info.removeFileIndex(s);
+                info.removeFileIndex(fileName);
                 info.storeComplete();
                 System.out.println("TIMEOUT ON STORE");
 
@@ -144,13 +133,10 @@ public class ClientThread implements Runnable {
 
     private void loadCommand(String s, int times) {
         System.out.println("Load command started");
-        if (info.checkIndexInProgress(s,3)) {
-            System.out.println("Concurrency error");
-            out.println("ERROR_FILE_DOES_NOT_EXIST");
-            return;
-        }
         try {
+            System.out.println("Load command started" + s + " " + times);
             int[] fileInfo = info.getFileDStores(s, times);
+            System.out.println("Load command started" + fileInfo[0] + " " + fileInfo[1] );
             int port = fileInfo[0];
             int filesize = fileInfo[1];
             String message = "LOAD_FROM " + port + " " + filesize;
@@ -159,7 +145,7 @@ public class ClientThread implements Runnable {
         } catch (NotEnoughDstoresException e) {
             out.println("ERROR_NOT_ENOUGH_DSTORES");
         } catch (FileDoesNotExistException e) {
-            out.print("ERROR_FILE_DOES_NOT_EXIST");
+            out.println("ERROR_FILE_DOES_NOT_EXIST");
         } catch (DStoreCantRecieveException e) {
             out.println("ERROR_LOAD");
         }
@@ -167,33 +153,28 @@ public class ClientThread implements Runnable {
 
     private void removeCommand(String fileName) {
         removeTimout = false;
-        if (info.checkIndexInProgress(fileName,1)) {
-            out.println("ERROR_FILE_DOES_NOT_EXIST");
-            return;
-        }
+        System.out.println("Remove command started");
         try {
-            if (info.checkFile(fileName)) {
-                info.removeFileFileList(fileName);
-                info.setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
-                System.out.println(
-                    "Client thread " + client.getPort() + " received REMOVE " + fileName);
-                removeTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        setRemoveTimeout(true);
-                        info.clearRemoveAcks();
-                        info.removeAckStart();
-                    }
-                }, info.getTimeOut());
-                info.removeStart(fileName);
-            } else {
-                out.println("ERROR_FILE_DOES_NOT_EXIST");
-            }
+            info.clientRemoveCommand(fileName);
+            removeTimer = new Timer();
+            removeTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    setRemoveTimeout(true);
+                    info.clearRemoveAcks();
+                    info.removeAckStart();
+                    System.out.println("TIMEOUT ON REMOVE");
+                }
+            }, info.getTimeOut());
+
         } catch (NotEnoughDstoresException e) {
             out.println("ERROR_NOT_ENOUGH_DSTORES");
 
+        } catch (FileDoesNotExistException e) {
+            out.println("ERROR_FILE_DOES_NOT_EXIST");
         }
     }
+
     private boolean getRemoveTimeout() {
         synchronized (this) {
             return removeTimout;
@@ -207,7 +188,6 @@ public class ClientThread implements Runnable {
     }
 
 
-
     private void startThreadWaiters() {
         new Thread(new Runnable() {
             @Override
@@ -219,7 +199,8 @@ public class ClientThread implements Runnable {
                     // TODO add timeout features for recieinving all acks and sending remove complete
                     if (!getRemoveTimeout()) {
                         out.println("REMOVE_COMPLETE");
-                        System.out.println("Client thread " + client.getPort() + " returned REMOVE_COMPLETE");
+                        System.out.println(
+                            "Client thread " + client.getPort() + " returned REMOVE_COMPLETE");
                     } else {
                         System.out.println("TIMEOUT ON REMOVE");
                     }

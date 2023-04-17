@@ -70,17 +70,11 @@ public class DStoreThread implements Runnable {
     }
 
     private void storeAckCommand(String line) {
-        if (info.checkIndexPresent(line.split(" ")[1])) {
-            String fileName = line.split(" ")[1];
-            info.updateFileDstores(fileName, port);
-            info.storeAck(fileName);
-        }
+        info.dstoreStoreAckCommmand(line,port);
     }
 
     private void removeAckCommand(String line) {
-        String fileName = line.split(" ")[1];
-        info.removeAck(fileName);
-
+        info.dstoreRemoveAckCommmand(line);
     }
 
     private void listCommand(String[] files) {
@@ -128,15 +122,4 @@ public class DStoreThread implements Runnable {
 
     }
 
-    private boolean getRebalanceTimout() {
-        synchronized (this){
-            return rebalanceTimout;
-        }
-    }
-
-    private void setRebalanceTimout(boolean value) {
-        synchronized (this){
-            rebalanceTimout = value;
-        }
-    }
 }

@@ -113,14 +113,14 @@ public class ControllerInfo {
 
     public void rebalance(String[] files, int port) {
         synchronized (fileLock) {
-        setRebalanveTakingPlace(true);
-        while (!checkIndex()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            setRebalanveTakingPlace(true);
+            while (!checkIndex()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        }
 
             for (String file : files) {
                 if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)) {
@@ -141,11 +141,10 @@ public class ControllerInfo {
 
             }
 
-
-        synchronized (rebalanceLock) {
-            rebalanceDStores();
-            rebalanceLock.notifyAll();
-        }
+            synchronized (rebalanceLock) {
+                rebalanceDStores();
+                rebalanceLock.notifyAll();
+            }
         }
     }
 
@@ -172,7 +171,7 @@ public class ControllerInfo {
             if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
             }
-            return fileIndex.containsKey(fileName);
+            return fileList.contains(fileName);
         }
     }
 
@@ -527,6 +526,10 @@ public class ControllerInfo {
     public int[] getFileDStores(String s, int times)
         throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
         synchronized (fileLock) {
+            if (checkIndexInProgress(s, 3)) {
+                System.out.println("Concurrency error");
+                throw new FileDoesNotExistException();
+            }
             System.out.println(fileDstoreMap);
             times = times - 1;
             if (!fileIndex.containsKey(s)) {
@@ -534,6 +537,7 @@ public class ControllerInfo {
             } else if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
             } else if (fileDstoreMap.get(s).size() <= times) {
+
                 throw new DStoreCantRecieveException();
             }
             System.out.println("File: " + s + " Dstores: " + fileDstoreMap.get(s).get(times));
@@ -581,7 +585,6 @@ public class ControllerInfo {
 
         }
     }
-
 
 
     public String getRemoveFiles(int port) {
@@ -715,14 +718,14 @@ public class ControllerInfo {
 
     }
 
-    public boolean checkIndexInProgress(String fileName,int command){
+    public boolean checkIndexInProgress(String fileName, int command) {
         synchronized (fileLock) {
-            boolean result=(fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS
+            boolean result = (fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS
                 || fileIndex.get(fileName) == Index.STORE_IN_PROGRESS);
-            if (!result){
-                if (command==1){
+            if (!result) {
+                if (command == 1) {
                     fileIndex.put(fileName, Index.REMOVE_IN_PROGRESS);
-                }else if (command==2){
+                } else if (command == 2) {
                     fileIndex.put(fileName, Index.STORE_IN_PROGRESS);
                 }
             }
@@ -769,13 +772,14 @@ public class ControllerInfo {
 
     public void rebalanceComplete() {
         synchronized (fileLock) {
-            if(getRebalanveTakingPlace()){
+            if (getRebalanveTakingPlace()) {
 
-            reloadAck.add(1);}
+                reloadAck.add(1);
+            }
             System.out.println("Reload ack size: " + reloadAck.size());
             System.out.println("Dstore list size: " + dstoreList.size());
             if (reloadAck.size() == dstoreList.size()) {
-                for(String file:fileList){
+                for (String file : fileList) {
                     if (fileIndex.get(file) == Index.REMOVE_IN_PROGRESS) {
                         setFileIndex(file, Index.REMOVE_COMPLETE);
                         removeFileDstoreMap(file);
@@ -795,13 +799,74 @@ public class ControllerInfo {
         }
     }
 
-    public void rebalanceTimout(){
+    public void rebalanceTimout() {
         synchronized (fileLock) {
-            if(getRebalanveTakingPlace()){
+            if (getRebalanveTakingPlace()) {
                 reloadAck.clear();
                 setRebalanveTakingPlace(false);
                 isRebalanceNotify();
                 System.out.println("Rebalance timeout");
+            }
+        }
+    }
+
+    public void dstoreStoreAckCommmand(String line, int port) {
+        synchronized (fileLock) {
+            if (checkIndexPresent(line.split(" ")[1])) {
+                String fileName = line.split(" ")[1];
+                updateFileDstores(fileName, port);
+                storeAck(fileName);
+            }
+        }
+    }
+
+    public void dstoreRemoveAckCommmand(String line) {
+        synchronized (fileLock) {
+            String fileName = line.split(" ")[1];
+            removeAck(fileName);
+        }
+    }
+
+    public void checkRebalanceTakingPlace() {
+        synchronized (fileLock) {
+            if (getRebalanveTakingPlace()) {
+                System.out.println("Rebalance taking place");
+                isRebalanceWait();
+            }
+        }
+    }
+
+    public String clientStoreCommand(String fileName, String fileSize)
+        throws FileAlreadyExistsException, NotEnoughDstoresException {
+        synchronized (fileLock) {
+            if (checkIndexInProgress(fileName, 2)) {
+                System.out.println("Concurrency error");
+                throw new FileAlreadyExistsException(fileName);
+            }
+            updateFileSize(fileName, Integer.parseInt(fileSize));
+            String message = null;
+            message = storeTo(fileName);
+            return message;
+
+
+        }
+
+    }
+
+    public void clientRemoveCommand(String fileName)
+        throws FileDoesNotExistException, NotEnoughDstoresException {
+        synchronized (fileLock) {
+            if (checkIndexInProgress(fileName, 1)) {
+                System.out.println("Concurrency error");
+                throw new FileDoesNotExistException();
+            }
+            if (checkFile(fileName)) {
+                removeFileFileList(fileName);
+                setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
+                removeStart(fileName);
+            } else {
+                System.out.println("File does not exist");
+                throw new FileDoesNotExistException();
             }
         }
     }
