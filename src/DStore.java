@@ -8,6 +8,8 @@ import java.net.Socket;
 
 public class DStore {
 
+    static boolean closeTestFlag = true;
+
     static int port = 0;
     static int cport = 0;
     static int timeOut = 0;
@@ -72,6 +74,19 @@ public class DStore {
                                     setUpControllerThread(controllerSocket, client);
                                     System.out.println("Controller thread started");
                                     closeFlag = false;
+                                    if (closeTestFlag) {
+                                        closeTestFlag = false;
+                                        System.out.println("Close test flag set to false");
+                                        try {
+                                            Thread.sleep(60000);
+
+                                            controllerSocket.close();
+                                            System.out.println("Controller thread ended");
+                                        } catch (InterruptedException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    }
+
                                     break;
                                 } else {
                                     setUpClientThread(client, line);

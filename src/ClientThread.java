@@ -49,6 +49,7 @@ public class ClientThread implements Runnable {
 
             }
             client.close();
+            info.systemCheck(70);
             System.out.println("ClientThread " + client.getPort() + " connection closed");
         } catch (IOException e) {
             e.printStackTrace();
@@ -89,6 +90,7 @@ public class ClientThread implements Runnable {
     private void storeCommand(String fileName, String fileSize) {
         System.out.println("Store command started");
         String message = null;
+        info.systemCheck(69);
         try {
             message = info.clientStoreCommand(fileName, fileSize);
         } catch (NotEnoughDstoresException e) {

@@ -67,6 +67,18 @@ public class ControllerInfo {
 
     Object fileLock = new Object();
 
+    public void removeDstoreList(int port) {
+        synchronized (fileLock) {
+            dstoreList.remove((Integer) port);
+        }
+    }
+
+    public void addDstoreList(int port) {
+        synchronized (fileLock) {
+            dstoreList.add(port);
+        }
+    }
+
     public boolean isRebalanceFlag() {
         synchronized (fileLock) {
             return rebalanceFlag;
@@ -659,7 +671,7 @@ public class ControllerInfo {
 
     }
 
-    private void systemCheck(int number) {
+    void systemCheck(int number) {
         System.out.println("*************************************");
         System.out.println("FileList: " + number + fileList);
         System.out.println("FileDstoreMap: " + number + fileDstoreMap);
@@ -670,6 +682,7 @@ public class ControllerInfo {
         System.out.println("DstoreList: " + number + dstoreList);
         System.out.println("DstoreNeedMap: " + number + dstoreNeedMap);
         System.out.println("DstoreRemoveMap: " + number + dstoreRemoveMap);
+        System.out.println("FileIndex " + number + fileIndex);
         System.out.println("*************************************");
 
     }
@@ -719,12 +732,14 @@ public class ControllerInfo {
 
     }
 
-    public boolean checkIndexInProgress(String fileName, int command) {
+    public boolean checkIndexInProgress(String fileName, int command)
+        throws NotEnoughDstoresException {
         synchronized (fileLock) {
+            systemCheck(00);
             boolean result = (fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS
                 || fileIndex.get(fileName) == Index.STORE_IN_PROGRESS);
             if (!result) {
-                if (command == 1) {
+                if (command == 1 && checkFile(fileName) ) {
                     fileIndex.put(fileName, Index.REMOVE_IN_PROGRESS);
                 } else if (command == 2) {
                     fileIndex.put(fileName, Index.STORE_IN_PROGRESS);
@@ -860,10 +875,8 @@ public class ControllerInfo {
             if (checkIndexInProgress(fileName, 1)) {
                 System.out.println("Concurrency error");
                 throw new FileDoesNotExistException();
-            }
-            if (checkFile(fileName)) {
+            } else if (checkFile(fileName)) {
                 removeFileFileList(fileName);
-                setFileIndex(fileName, Index.REMOVE_IN_PROGRESS);
                 removeStart(fileName);
             } else {
                 System.out.println("File does not exist");
@@ -871,5 +884,52 @@ public class ControllerInfo {
             }
         }
     }
+
+    public void removeDstoreFileDstore(int port) {
+        synchronized (fileLock) {
+            if (dstoreFileMap.containsKey(port)) {
+                ArrayList<String> files = new ArrayList<>(dstoreFileMap.get(port));
+                for (String file : files) {
+                    if (fileDstoreMap.containsKey(file)) {
+                        ArrayList<Integer> dstores = new ArrayList<>(fileDstoreMap.get(file));
+                        dstores.remove((Integer) port);
+                        fileDstoreMap.put(file, dstores);
+                    }
+                }
+            }
+        }
+    }
+
+    public void removeDstoreDstoreFileMap(int port) {
+        synchronized (fileLock) {
+            if (dstoreFileMap.containsKey(port)) {
+                dstoreFileMap.remove((Integer) port);
+            }
+        }
+    }
+
+    public void removeDstoreReloadLists(int port) {
+        synchronized (fileLock) {
+            if (dstoreRemoveMap.containsKey(port)) {
+                dstoreRemoveMap.remove((Integer) port);
+            }
+            if (dstoreNeedMap.containsKey(port)) {
+                dstoreNeedMap.remove((Integer) port);
+            }
+        }
+    }
+
+
+    public void removeDstore(int port) {
+        synchronized (fileLock) {
+            removeDstoreList(port);
+            removeDstoreFileDstore(port);
+            removeDstoreDstoreFileMap(port);
+            removeDstoreReloadLists(port);
+            systemCheck(66);
+        }
+    }
+
+
 }
 

@@ -27,6 +27,7 @@ public class DStoreThread implements Runnable {
     @Override
     public void run() {
         BufferedReader in = null;
+        String line = null;
         try {
             System.out.println("DStoreThread " + port + " started properly");
             in = new BufferedReader(
@@ -35,7 +36,6 @@ public class DStoreThread implements Runnable {
             startThreadWaiters();
             out.println("LIST");
 
-            String line;
             System.out.println("DStoreThread " + port + " started");
 
             while ((line = in.readLine()) != null) {
@@ -43,11 +43,27 @@ public class DStoreThread implements Runnable {
                 handleCommand(line);
             }
             client.close();
+            closeDstore();
             System.out.println("DStoreThread" + port + "connection closed");
         } catch (IOException e) {
+            System.out.println("DStoreThread" + port + "connection closed2");
+            System.out.println("DStoreThread" + port + " line = " + line);
+            if (client != null && !client.isClosed()) {
+                try {
+                    client.close();
+                    System.out.println("DStore thread " + port + " closed client");
+                } catch (IOException e1) {
+                    System.out.println("client failed to close");
+                    e1.printStackTrace();
+                }
+            }
             e.printStackTrace();
         }
 
+    }
+
+    private void closeDstore() {
+        info.removeDstore(port);
     }
 
     private void handleCommand(String line) {
@@ -70,7 +86,7 @@ public class DStoreThread implements Runnable {
     }
 
     private void storeAckCommand(String line) {
-        info.dstoreStoreAckCommmand(line,port);
+        info.dstoreStoreAckCommmand(line, port);
     }
 
     private void removeAckCommand(String line) {

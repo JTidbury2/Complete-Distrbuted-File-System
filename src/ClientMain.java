@@ -30,6 +30,7 @@ public class ClientMain {
 		testClient(cport, timeout, downloadFolder, uploadFolder);
 
 		// launch a number of concurrent clients, each doing the same operations
+		/**
 		for (int i = 0; i < 10; i++) {
 			new Thread() {
 				public void run() {
@@ -37,6 +38,7 @@ public class ClientMain {
 				}
 			}.start();
 		}
+		*/
 
 	}
 	
@@ -113,6 +115,7 @@ public class ClientMain {
 			if (list != null)
 				for (String filename : list)
 					try { client.load(filename, downloadFolder); } catch(IOException e) { e.printStackTrace(); }
+
 
 			if (list != null)
 				for (String filename : list)
