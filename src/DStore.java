@@ -77,14 +77,16 @@ public class DStore {
                                     if (closeTestFlag) {
                                         closeTestFlag = false;
                                         System.out.println("Close test flag set to false");
+
                                         try {
                                             Thread.sleep(60000);
-
+                                            client.close();
                                             controllerSocket.close();
                                             System.out.println("Controller thread ended");
                                         } catch (InterruptedException e) {
                                             throw new RuntimeException(e);
                                         }
+
                                     }
 
                                     break;

@@ -130,6 +130,8 @@ public class ControllerInfo {
             while (!checkIndex()) {
                 try {
                     Thread.sleep(1000);
+                    systemCheck(23);
+                    System.out.println("Waiting for index to complete");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -165,14 +167,18 @@ public class ControllerInfo {
         synchronized (fileLock) {
             boolean result = false;
             if (fileIndex.size() == 0) {
+                System.out.println("Index is empty");
                 return true;
             }
-            for (String file : fileList) {
-                if (fileIndex.containsKey(file) && !(fileIndex.get(file) == Index.STORE_IN_PROGRESS)
-                    && !(fileIndex.get(file) == Index.REMOVE_IN_PROGRESS)) {
-                    result = true;
+            int count=0;
+            for (String fileName: fileIndex.keySet()) {
+                if (!(fileIndex.get(fileName) == Index.STORE_IN_PROGRESS)
+                    && !(fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS)) {
+                    count++;
                 }
-
+            }
+            if (count == fileIndex.size()) {
+                result = true;
             }
             return result;
         }
@@ -893,6 +899,11 @@ public class ControllerInfo {
                     if (fileDstoreMap.containsKey(file)) {
                         ArrayList<Integer> dstores = new ArrayList<>(fileDstoreMap.get(file));
                         dstores.remove((Integer) port);
+                        System.out.println("Dstores size: " + dstores.size());
+                        System.out.println("File: " + file );
+                        if (dstores.size() == 0) {
+                            removeFileFileList(file);
+                        }
                         fileDstoreMap.put(file, dstores);
                     }
                 }
@@ -929,6 +940,8 @@ public class ControllerInfo {
             systemCheck(66);
         }
     }
+
+
 
 
 }
