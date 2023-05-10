@@ -28,8 +28,9 @@ public class ClientMain {
 
 		// launch a single client
 		testClient(cport, timeout, downloadFolder, uploadFolder);
-		/**
+
 		// launch a number of concurrent clients, each doing the same operations
+		/**
 		for (int i = 0; i < 10; i++) {
 			new Thread() {
 				public void run() {
@@ -37,7 +38,8 @@ public class ClientMain {
 				}
 			}.start();
 		}
-		 */
+		*/
+
 	}
 	
 	public static void test2Client(int cport, int timeout, File downloadFolder, File uploadFolder) {
@@ -90,7 +92,7 @@ public class ClientMain {
 			client = new Client(cport, timeout, Logger.LoggingType.ON_FILE_AND_TERMINAL);
 		
 			try { client.connect(); } catch(IOException e) { e.printStackTrace(); return; }
-			/**
+
 			
 			try { list(client); } catch(IOException e) { e.printStackTrace(); }
 			
@@ -106,21 +108,22 @@ public class ClientMain {
 			if (fileList.length > 2) {
 				try { client.store(fileList[2]); } catch(IOException e) { e.printStackTrace(); }
 			}
-			 */
+
 			String list[] = null;
 			try { list = list(client); } catch(IOException e) { e.printStackTrace(); }
 			
 			if (list != null)
 				for (String filename : list)
 					try { client.load(filename, downloadFolder); } catch(IOException e) { e.printStackTrace(); }
+
 			/**
 			if (list != null)
 				for (String filename : list)
 					try { client.remove(filename); } catch(IOException e) { e.printStackTrace(); }
-			*/
+
 			if (list != null && list.length > 0)
 				try { client.remove(list[0]); } catch(IOException e) { e.printStackTrace(); }
-
+			*/
 
 			try { list(client); } catch(IOException e) { e.printStackTrace(); }
 

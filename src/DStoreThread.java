@@ -9,6 +9,10 @@ import java.util.TimerTask;
 
 public class DStoreThread implements Runnable {
 
+    Timer rebalanceTimer = new Timer();
+
+    boolean rebalanceTimout = false;
+
     private Socket client;
     int port;
     ControllerInfo info;
@@ -23,14 +27,15 @@ public class DStoreThread implements Runnable {
     @Override
     public void run() {
         BufferedReader in = null;
+        String line = null;
         try {
+            System.out.println("DStoreThread " + port + " started properly");
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(new Socket("localhost", port).getOutputStream(), true);
             startThreadWaiters();
             out.println("LIST");
 
-            String line;
             System.out.println("DStoreThread " + port + " started");
 
             while ((line = in.readLine()) != null) {
@@ -38,11 +43,27 @@ public class DStoreThread implements Runnable {
                 handleCommand(line);
             }
             client.close();
+            closeDstore();
             System.out.println("DStoreThread" + port + "connection closed");
         } catch (IOException e) {
+            System.out.println("DStoreThread" + port + "connection closed2");
+            System.out.println("DStoreThread" + port + " line = " + line);
+            if (client != null && !client.isClosed()) {
+                try {
+                    client.close();
+                    System.out.println("DStore thread " + port + " closed client");
+                } catch (IOException e1) {
+                    System.out.println("client failed to close");
+                    e1.printStackTrace();
+                }
+            }
             e.printStackTrace();
         }
 
+    }
+
+    private void closeDstore() {
+        info.removeDstore(port);
     }
 
     private void handleCommand(String line) {
@@ -65,22 +86,15 @@ public class DStoreThread implements Runnable {
     }
 
     private void storeAckCommand(String line) {
-        if (info.checkIndexPresent(line.split(" ")[1])) {
-            String fileName = line.split(" ")[1];
-            info.updateFileDstores(fileName, port);
-            info.storeAck(fileName);
-        }
+        info.dstoreStoreAckCommmand(line, port);
     }
 
     private void removeAckCommand(String line) {
-        String fileName = line.split(" ")[1];
-        info.removeAck(fileName);
-
+        info.dstoreRemoveAckCommmand(line);
     }
 
     private void listCommand(String[] files) {
         info.rebalance(files, port);
-
     }
 
     private void startThreadWaiters() {
@@ -107,24 +121,21 @@ public class DStoreThread implements Runnable {
                     String files_to_send = info.getSendFiles(port);
                     files_to_send.trim();
                     files_to_remove.trim();
-                    System.out.println("TEST ME OUT PUNK");
                     String message = "REBALANCE " + files_to_send + " " + files_to_remove;
                     message.replaceAll("\\s+", " ");
-                    System.out.println("TEST ME OUT PUNK");
                     out.println(message);
+                    rebalanceTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            info.rebalanceTimout();
+                        }
+                    }, info.getTimeOut());
+
                 }
             }
         }, "Store Start Watcher Thread").start();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (info.getListFlag()) {
-                    System.out.println("List watcher started");
-                    info.joinWait();
-                    out.println("LIST");
-                }
-            }
-        }, "LIST Watcher thread").start();
+
     }
+
 }

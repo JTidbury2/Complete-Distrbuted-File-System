@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -6,6 +7,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class DStore {
+
+    static boolean closeTestFlag = true;
 
     static int port = 0;
     static int cport = 0;
@@ -24,6 +27,14 @@ public class DStore {
         timeOut = Integer.parseInt(args[2]);
         fileFolder = args[3];
         System.out.println("DStore " + port + " started");
+        File folder = new File(System.getProperty("user.dir"), fileFolder);
+        if (!folder.exists()) {
+            folder.mkdir();
+        }
+        File[] flist = folder.listFiles();
+        for (File file:flist){
+            file.delete();
+        }
         connectToController();
         System.out.println("DStore " + port + " connected to controller");
         setUpListenerPort();
@@ -63,6 +74,21 @@ public class DStore {
                                     setUpControllerThread(controllerSocket, client);
                                     System.out.println("Controller thread started");
                                     closeFlag = false;
+                                    if (closeTestFlag) {
+                                        closeTestFlag = false;
+                                        System.out.println("Close test flag set to false");
+
+                                        try {
+                                            Thread.sleep(60000);
+                                            client.close();
+                                            controllerSocket.close();
+                                            System.out.println("Controller thread ended");
+                                        } catch (InterruptedException e) {
+                                            throw new RuntimeException(e);
+                                        }
+
+                                    }
+
                                     break;
                                 } else {
                                     setUpClientThread(client, line);

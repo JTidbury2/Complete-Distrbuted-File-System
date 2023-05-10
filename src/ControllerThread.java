@@ -54,7 +54,7 @@ public class ControllerThread implements Runnable {
         if (line.startsWith("REMOVE")) {
             System.out.println("Controller thread recieved " + line);
             String[] input = line.split(" ");
-            removeFile(input[1]);
+            removeFile(input[1],true);
         } else if (line.startsWith("REBALANCE")) {
             System.out.println("Controller thread recieved " + line);
             line = line.replaceAll("\\s+", " ");
@@ -70,7 +70,7 @@ public class ControllerThread implements Runnable {
         }
     }
 
-    private void removeFile(String s) {
+    private void removeFile(String s,boolean isRemove) {
 
         if (!info.checkFileExist(s)) {
             out.println("ERROR_FILE_DOES_NOT_EXIST " + s);
@@ -79,7 +79,9 @@ public class ControllerThread implements Runnable {
         File file = new File(folder, s);
         if (file.delete()) {
             System.out.println("File deleted successfully");
-            out.println("REMOVE_ACK " + s);
+            if(isRemove) {
+                out.println("REMOVE_ACK " + s);
+            }
         } else {
             System.out.println("Failed to delete the file " + s);
         }
@@ -118,7 +120,7 @@ public class ControllerThread implements Runnable {
                     removeAmount = Integer.parseInt(s[counter]);
                     counter++;
                 } else {
-                    removeFile(s[counter]);
+                    removeFile(s[counter],false);
                     counter++;
                 }
 
