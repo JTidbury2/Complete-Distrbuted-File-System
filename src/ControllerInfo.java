@@ -125,7 +125,7 @@ public class ControllerInfo {
 
 
     public void rebalance(String[] files, int port) {
-        synchronized (fileLock) {
+
             setRebalanveTakingPlace(true);
             while (!checkIndex()) {
                 try {
@@ -136,7 +136,7 @@ public class ControllerInfo {
                     e.printStackTrace();
                 }
             }
-
+            synchronized (fileLock) {
             for (String file : files) {
                 if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)) {
                     fileDstoreMap.get(file).add(port);
@@ -170,8 +170,8 @@ public class ControllerInfo {
                 System.out.println("Index is empty");
                 return true;
             }
-            int count=0;
-            for (String fileName: fileIndex.keySet()) {
+            int count = 0;
+            for (String fileName : fileIndex.keySet()) {
                 if (!(fileIndex.get(fileName) == Index.STORE_IN_PROGRESS)
                     && !(fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS)) {
                     count++;
@@ -180,8 +180,8 @@ public class ControllerInfo {
             if (count == fileIndex.size()) {
                 result = true;
             }
-            System.out.println("Index is"+ fileIndex);
-            System.out.println("Count is "+ count);
+            System.out.println("Index is" + fileIndex);
+            System.out.println("Count is " + count);
             return result;
         }
     }
@@ -447,13 +447,15 @@ public class ControllerInfo {
     }
 
 
-    public void removeWait() {
+    public String removeWait() {
         synchronized (removeLock) {
             try {
                 removeLock.wait();
                 System.out.println("Remove wait done");
+                return removeFile;
             } catch (InterruptedException e) {
                 e.printStackTrace();
+                return null;
             }
         }
     }
@@ -747,7 +749,7 @@ public class ControllerInfo {
             boolean result = (fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS
                 || fileIndex.get(fileName) == Index.STORE_IN_PROGRESS);
             if (!result) {
-                if (command == 1 && checkFile(fileName) ) {
+                if (command == 1 && checkFile(fileName)) {
                     fileIndex.put(fileName, Index.REMOVE_IN_PROGRESS);
                 } else if (command == 2) {
                     fileIndex.put(fileName, Index.STORE_IN_PROGRESS);
@@ -863,9 +865,9 @@ public class ControllerInfo {
     public String clientStoreCommand(String fileName, String fileSize)
         throws FileAlreadyExistsException, NotEnoughDstoresException {
         synchronized (fileLock) {
-            if (dstoreList.size()<repFactor){
-            throw new NotEnoughDstoresException();
-        }
+            if (dstoreList.size() < repFactor) {
+                throw new NotEnoughDstoresException();
+            }
             if (checkFile(fileName)) {
                 System.out.println("File already exists");
                 throw new FileAlreadyExistsException(fileName);
@@ -874,7 +876,6 @@ public class ControllerInfo {
                 System.out.println("Concurrency error");
                 throw new FileAlreadyExistsException(fileName);
             }
-
 
             updateFileSize(fileName, Integer.parseInt(fileSize));
             String message = null;
@@ -911,7 +912,7 @@ public class ControllerInfo {
                         ArrayList<Integer> dstores = new ArrayList<>(fileDstoreMap.get(file));
                         dstores.remove((Integer) port);
                         System.out.println("Dstores size: " + dstores.size());
-                        System.out.println("File: " + file );
+                        System.out.println("File: " + file);
                         if (dstores.size() == 0) {
                             removeFileFileList(file);
                         }
@@ -951,8 +952,6 @@ public class ControllerInfo {
             systemCheck(66);
         }
     }
-
-
 
 
 }

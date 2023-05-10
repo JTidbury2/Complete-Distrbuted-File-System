@@ -113,6 +113,10 @@ public class ClientMain {
 				try { client.store(fileList[2]); } catch(IOException e) { e.printStackTrace(); }
 			}
 
+			if (fileList.length > 3) {
+				try { client.store(fileList[3]); } catch(IOException e) { e.printStackTrace(); }
+			}
+
 			String list[] = null;
 			try { list = list(client); } catch(IOException e) { e.printStackTrace(); }
 			

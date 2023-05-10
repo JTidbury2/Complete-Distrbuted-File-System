@@ -103,10 +103,10 @@ public class DStoreThread implements Runnable {
             public void run() {
                 while (info.getRemoveFlag()) {
                     System.out.println("Remove watcher started");
-                    info.removeWait();
 
-                    out.println("REMOVE " + info.getRemoveFile());
-                    System.out.println("REMOVE " + info.getRemoveFile());
+                    String temp = info.removeWait();
+                    out.println("REMOVE " + temp);
+                    System.out.println("REMOVE " + temp);
                 }
             }
         }, "Remove Start Watcher Thread").start();
