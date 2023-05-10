@@ -129,7 +129,7 @@ public class ControllerInfo {
             setRebalanveTakingPlace(true);
             while (!checkIndex()) {
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(10);
                     systemCheck(23);
                     System.out.println("Waiting for index to complete");
                 } catch (InterruptedException e) {
