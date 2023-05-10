@@ -180,6 +180,8 @@ public class ControllerInfo {
             if (count == fileIndex.size()) {
                 result = true;
             }
+            System.out.println("Index is"+ fileIndex);
+            System.out.println("Count is "+ count);
             return result;
         }
     }
@@ -861,10 +863,19 @@ public class ControllerInfo {
     public String clientStoreCommand(String fileName, String fileSize)
         throws FileAlreadyExistsException, NotEnoughDstoresException {
         synchronized (fileLock) {
+            if (dstoreList.size()<repFactor){
+            throw new NotEnoughDstoresException();
+        }
+            if (checkFile(fileName)) {
+                System.out.println("File already exists");
+                throw new FileAlreadyExistsException(fileName);
+            }
             if (checkIndexInProgress(fileName, 2)) {
                 System.out.println("Concurrency error");
                 throw new FileAlreadyExistsException(fileName);
             }
+
+
             updateFileSize(fileName, Integer.parseInt(fileSize));
             String message = null;
             message = storeTo(fileName);

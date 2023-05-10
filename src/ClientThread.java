@@ -45,6 +45,7 @@ public class ClientThread implements Runnable {
             while ((line = in.readLine()) != null) {
 
                 System.out.println("ClientThread" + client.getPort() + "received" + line);
+                info.systemCheck(72);
                 handleCommand(line);
 
             }

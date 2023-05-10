@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class DStore {
+public class Dstore {
 
     static boolean closeTestFlag = true;
 
@@ -74,21 +74,6 @@ public class DStore {
                                     setUpControllerThread(controllerSocket, client);
                                     System.out.println("Controller thread started");
                                     closeFlag = false;
-                                    if (closeTestFlag) {
-                                        closeTestFlag = false;
-                                        System.out.println("Close test flag set to false");
-
-                                        try {
-                                            Thread.sleep(60000);
-                                            client.close();
-                                            controllerSocket.close();
-                                            System.out.println("Controller thread ended");
-                                        } catch (InterruptedException e) {
-                                            throw new RuntimeException(e);
-                                        }
-
-                                    }
-
                                     break;
                                 } else {
                                     setUpClientThread(client, line);
