@@ -41,7 +41,6 @@ public class ClientThread implements Runnable {
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
-            startThreadWaiters();
             handleCommand(firstCommand);
 
             String line;
@@ -156,23 +155,29 @@ public class ClientThread implements Runnable {
         removeTimout = false;
         System.out.println("Remove command started");
         try {
-            removeMe=info.clientRemoveCommand(fileName);
-            removeTimer = new Timer();
-            removeTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    setRemoveTimeout(true);
-                    info.clearRemoveAcks(fileName);
-                    info.removeAckStart();
-                    System.out.println("TIMEOUT ON REMOVE");
-                }
-            }, info.getTimeOut());
+
+            info.clientRemoveCommand(fileName);
+            CountDownLatch removeLatch = new CountDownLatch(info.getRepFactor());
+            info.addRemoveLatchMap(fileName, removeLatch);
+
+            boolean completeRemove = removeLatch.await(info.getTimeOut(), TimeUnit.MILLISECONDS);
+            if (completeRemove){
+                System.out.println("Remove complete");
+                info.removeFileExistance(fileName);
+                out.println("REMOVE_COMPLETE");
+                System.out.println(
+                    "Client thread " + client.getPort() + " returned REMOVE_COMPLETE");
+            }else{
+                System.out.println("TIMEOUT ON REMOVE");
+            }
 
         } catch (NotEnoughDstoresException e) {
             out.println("ERROR_NOT_ENOUGH_DSTORES");
 
         } catch (FileDoesNotExistException e) {
             out.println("ERROR_FILE_DOES_NOT_EXIST");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -189,25 +194,5 @@ public class ClientThread implements Runnable {
     }
 
 
-    private void startThreadWaiters() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (info.getRemoveAckFlag()) {
-                    System.out.println("Remove ack watcher started");
-                    info.removeAckWait();
-                    removeTimer.cancel();
-                    // TODO add timeout features for recieinving all acks and sending remove complete
-                    if (!getRemoveTimeout() && removeMe) {
-                        out.println("REMOVE_COMPLETE");
-                        System.out.println(
-                            "Client thread " + client.getPort() + " returned REMOVE_COMPLETE");
-                        removeMe=false;
-                    } else {
-                        System.out.println("TIMEOUT ON REMOVE");
-                    }
-                }
-            }
-        }, "Remove Ack Thread").start();
-    }
+
 }

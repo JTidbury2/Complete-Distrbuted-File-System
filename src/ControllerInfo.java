@@ -14,6 +14,8 @@ public class ControllerInfo {
     private boolean listFlag = true;
 
     private HashMap<String, CountDownLatch> storeLatchMap = new HashMap<String, CountDownLatch>();
+
+    private HashMap<String, CountDownLatch> removeLatchMap = new HashMap<String, CountDownLatch>();
     private ArrayList<Integer> dstoreList = new ArrayList<Integer>();
     private ArrayList<String> fileList = new ArrayList<String>();
     private HashMap<String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
@@ -38,8 +40,7 @@ public class ControllerInfo {
 
     private HashMap<String, Index> fileIndex = new HashMap<String, Index>();
     private HashMap<String, Integer> fileSizeMap = new HashMap<String, Integer>();
-    private HashMap<String, ArrayList<Integer>> removeAcks = new HashMap<String,
-        ArrayList<Integer>>();
+
 
     private ArrayList<Integer> reloadAck = new ArrayList<>();
 
@@ -55,20 +56,28 @@ public class ControllerInfo {
 
     private Object removeLock = new Object();
 
-    private Object removeAckLock = new Object();
-
     private Object rebalanceLock = new Object();
 
     private String removeFile = null;
 
     private String addFile = null;
 
-    boolean removeAckFlag = true;
-
     boolean removeFlag = true;
     boolean rebalanceFlag = true;
 
     Object fileLock = new Object();
+
+    public void addRemoveLatchMap(String file, CountDownLatch latch) {
+        synchronized (fileLock) {
+            removeLatchMap.put(file, latch);
+        }
+    }
+
+    public void removeRemoveLatchMap(String file) {
+        synchronized (fileLock) {
+            removeLatchMap.remove(file);
+        }
+    }
 
     public void addStoreLatchMap(String file, CountDownLatch latch) {
         synchronized (fileLock) {
@@ -224,11 +233,7 @@ public class ControllerInfo {
         }
     }
 
-    public boolean getRemoveAckFlag() {
-        synchronized (fileLock) {
-            return removeAckFlag;
-        }
-    }
+
 
     public boolean getRemoveFlag() {
         synchronized (fileLock) {
@@ -371,37 +376,18 @@ public class ControllerInfo {
         }
     }
 
-
-    public void removeAck(String fileName) {
-        synchronized (fileLock) {
-            if (removeAcks.containsKey(fileName)) {
-                removeAcks.get(fileName).add(1);
-            } else {
-                ArrayList<Integer> acks = new ArrayList<Integer>();
-                acks.add(1);
-                removeAcks.put(fileName, acks);
-            }
-            if (removeAcks.get(fileName).size() == repFactor) {
-                System.out.println("Remove complete");
-                removeAcks.remove(fileName);
-                setFileIndex(fileName, Index.REMOVE_COMPLETE);
-                removeFileDstoreMap(fileName);
-                removeFileSizeMap(fileName);
-                removeFileLoadCount(fileName);
-                removeFileFileList(fileName);
-                removeDstoreFilemap(fileName);
-                fileLoadRecord.remove(fileName);
-                removeAckStart();
-            }
-
+    public void removeFileExistance(String fileName){
+        synchronized (fileLock){
+            setFileIndex(fileName, Index.REMOVE_COMPLETE);
+            removeFileDstoreMap(fileName);
+            removeFileSizeMap(fileName);
+            removeFileLoadCount(fileName);
+            removeFileFileList(fileName);
+            removeDstoreFilemap(fileName);
+            fileLoadRecord.remove(fileName);
         }
     }
 
-    public void clearRemoveAcks(String fileName) {
-        synchronized (fileLock) {
-            removeAcks.remove(fileName);
-        }
-    }
 
     private void removeDstoreFilemap(String fileName) {
         synchronized (fileLock) {
@@ -476,22 +462,7 @@ public class ControllerInfo {
         }
     }
 
-    public void removeAckWait() {
-        synchronized (removeAckLock) {
-            try {
-                removeAckLock.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
-
-    public void removeAckStart() {
-        synchronized (removeAckLock) {
-            removeAckLock.notifyAll();
-        }
-    }
 
 
     public int getCport() {
@@ -872,7 +843,7 @@ public class ControllerInfo {
     public void dstoreRemoveAckCommmand(String line) {
         synchronized (fileLock) {
             String fileName = line.split(" ")[1];
-            removeAck(fileName);
+            removeLatchMap.get(fileName).countDown();
         }
     }
 
@@ -910,7 +881,7 @@ public class ControllerInfo {
 
     }
 
-    public boolean clientRemoveCommand(String fileName)
+    public void clientRemoveCommand(String fileName)
         throws FileDoesNotExistException, NotEnoughDstoresException {
         synchronized (fileLock) {
             if (checkIndexInProgress(fileName, 1)) {
@@ -919,7 +890,6 @@ public class ControllerInfo {
             } else if (checkFile(fileName)) {
                 removeFileFileList(fileName);
                 removeStart(fileName);
-                return true;
             } else {
                 System.out.println("File does not exist");
                 throw new FileDoesNotExistException();
