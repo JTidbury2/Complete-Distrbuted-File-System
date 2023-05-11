@@ -19,12 +19,13 @@ public class Dstore {
     static ServerSocket ss;
     static Socket clientSocket;
     static String[] fileList;
-    static DStoreInfo info = new DStoreInfo();
+    static DStoreInfo info ;
 
     public static void main(String[] args) {
         port = Integer.parseInt(args[0]);
         cport = Integer.parseInt(args[1]);
         timeOut = Integer.parseInt(args[2]);
+        info=new DStoreInfo(port,cport,timeOut);
         fileFolder = args[3];
         System.out.println("DStore " + port + " started");
         File folder = new File(System.getProperty("user.dir"), fileFolder);

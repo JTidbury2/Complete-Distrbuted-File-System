@@ -33,6 +33,7 @@ public class DClientThread implements Runnable {
     @Override
     public void run() {
         try {
+            client.setSoTimeout(info.getTimeOut());
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
