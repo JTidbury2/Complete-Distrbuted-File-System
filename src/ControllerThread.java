@@ -33,7 +33,6 @@ public class ControllerThread implements Runnable {
             in = new BufferedReader(
                 new InputStreamReader(dstoreIn.getInputStream()));
             startThreadWaiters();
-            handleCommand("LIST");
 
             String line;
             System.out.println("Controller thread " + controller.getPort() + " started");
