@@ -547,6 +547,18 @@ public class ControllerInfo {
         this.cport = cport;
     }
 
+    public ArrayList<Integer> getDstorewithFile(String file){
+        synchronized (fileLock){
+            ArrayList<Integer> dstores = new ArrayList<Integer>();
+            for (Integer dstore : dstoreList){
+                if (dstoreFileMap.get(dstore).contains(file)){
+                    dstores.add(dstore);
+                }
+            }
+            return dstores;
+        }
+    }
+
     public int[] getFileDStores(String s, int port)
         throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
         synchronized (fileLock) {
