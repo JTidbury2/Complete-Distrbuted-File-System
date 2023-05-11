@@ -1,6 +1,7 @@
 import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
 
 
 public class ControllerInfo {
@@ -11,6 +12,8 @@ public class ControllerInfo {
     private int rebalanceTime = 0;
 
     private boolean listFlag = true;
+
+    private HashMap<String, CountDownLatch> storeLatchMap = new HashMap<String, CountDownLatch>();
     private ArrayList<Integer> dstoreList = new ArrayList<Integer>();
     private ArrayList<String> fileList = new ArrayList<String>();
     private HashMap<String, ArrayList<Integer>> fileDstoreMap = new HashMap<String, ArrayList<Integer>>();
@@ -34,7 +37,6 @@ public class ControllerInfo {
     HashMap<String, ArrayList<Integer>> dstoreNeedMap = new HashMap<>();
 
     private HashMap<String, Index> fileIndex = new HashMap<String, Index>();
-    private HashMap<String, ArrayList<Integer>> storeAcks = new HashMap<String, ArrayList<Integer>>();
     private HashMap<String, Integer> fileSizeMap = new HashMap<String, Integer>();
     private HashMap<String, ArrayList<Integer>> removeAcks = new HashMap<String,
         ArrayList<Integer>>();
@@ -67,6 +69,18 @@ public class ControllerInfo {
     boolean rebalanceFlag = true;
 
     Object fileLock = new Object();
+
+    public void addStoreLatchMap(String file, CountDownLatch latch) {
+        synchronized (fileLock) {
+            storeLatchMap.put(file, latch);
+        }
+    }
+
+    public void removeStoreLatchMap(String file) {
+        synchronized (fileLock) {
+            storeLatchMap.remove(file);
+        }
+    }
 
     public void removeDstoreList(int port) {
         synchronized (fileLock) {
@@ -119,8 +133,16 @@ public class ControllerInfo {
 
     public void removeFileIndex(String file) {
         synchronized (fileLock) {
-            storeAcks.remove(file);
             fileIndex.remove(file);
+
+        }
+    }
+
+    public void storeFailed(String file){
+        synchronized (fileLock){
+            removeFileIndex(file);
+            removeFileDstoreMap(file);
+            removeDstoreFilemap(file);
         }
     }
 
@@ -417,23 +439,11 @@ public class ControllerInfo {
         }
     }
 
-
-    public void storeAck(String file) {
-        synchronized (fileLock) {
-            if (storeAcks.containsKey(file)) {
-                storeAcks.get(file).add(1);
-            } else {
-                ArrayList<Integer> acks = new ArrayList<Integer>();
-                acks.add(1);
-                storeAcks.put(file, acks);
-            }
-            if (storeAcks.get(file).size() == repFactor) {
-                System.out.println("Store complete");
-                storeAcks.remove(file);
-                setFileIndex(file, Index.STORE_COMPLETE);
-                fileList.add(file);
-                storeComplete();
-            }
+    public void storeFinished (String file){
+        synchronized (fileLock){
+            System.out.println("Store complete");
+            setFileIndex(file, Index.STORE_COMPLETE);
+            fileList.add(file);
         }
     }
 
@@ -483,21 +493,6 @@ public class ControllerInfo {
         }
     }
 
-    public void storeComplete() {
-        synchronized (storeLock) {
-            storeLock.notifyAll();
-        }
-    }
-
-    public void storeWait() {
-        synchronized (storeLock) {
-            try {
-                storeLock.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     public int getCport() {
         return cport;
@@ -857,7 +852,7 @@ public class ControllerInfo {
             if (checkIndexPresent(line.split(" ")[1])) {
                 String fileName = line.split(" ")[1];
                 updateFileDstores(fileName, port);
-                storeAck(fileName);
+                storeLatchMap.get(fileName).countDown();
             }
         }
     }

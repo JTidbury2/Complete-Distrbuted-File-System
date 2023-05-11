@@ -7,6 +7,8 @@ import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 
 public class ClientThread implements Runnable {
@@ -107,32 +109,26 @@ public class ClientThread implements Runnable {
         }
         out.println(message);
         System.out.println("Client thread " + client.getPort() + " returned " + message);
-        storeComplete = true;
-        Timer timer = new Timer();
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                storeComplete = false;
-                info.removeFileIndex(fileName);
-                info.storeComplete();
+
+
+        CountDownLatch clientLatch = new CountDownLatch(info.getRepFactor());
+        info.addStoreLatchMap(fileName, clientLatch);
+        try {
+            boolean completeStore = clientLatch.await(info.getTimeOut(), TimeUnit.MILLISECONDS);
+            if (completeStore){
+                info.storeFinished(fileName);
+                out.println("STORE_COMPLETE");
+                System.out.println("Client thread " + client.getPort() + " returned STORE_COMPLETE");
+            } else {
+                info.storeFailed(fileName);
                 System.out.println("TIMEOUT ON STORE");
-
             }
-        };
-
-        timer.schedule(task, info.getTimeOut());
-
-        info.storeWait();
-
-        task.cancel();
-        timer.cancel();
-
-        //TODO add timeout features for recieinving all acks and sending store complete
-        System.out.println("Store Complete = " + storeComplete);
-        if (storeComplete) {
-            out.println("STORE_COMPLETE");
-            System.out.println("Client thread " + client.getPort() + " returned STORE_COMPLETE");
+            info.removeStoreLatchMap(fileName);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
+        System.out.println("Store Complete = " + storeComplete);
+
     }
 
 
