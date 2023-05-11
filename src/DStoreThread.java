@@ -32,7 +32,7 @@ public class DStoreThread implements Runnable {
             System.out.println("DStoreThread " + port + " started properly");
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
-            out = new PrintWriter(new Socket("localhost", port).getOutputStream(), true);
+            out = new PrintWriter(client.getOutputStream(), true);
             startThreadWaiters();
             out.println("LIST");
 

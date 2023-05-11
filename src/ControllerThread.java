@@ -18,10 +18,10 @@ public class ControllerThread implements Runnable {
 
     String folderName;
 
-    public ControllerThread(Socket controller, Socket dstoreIn, DStoreInfo infos,
+    public ControllerThread(Socket controller,DStoreInfo infos,
         String folderName) {
         this.controller = controller;
-        this.dstoreIn = dstoreIn;
+        this.dstoreIn = controller;
         info = infos;
         this.folderName = folderName;
     }

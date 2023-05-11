@@ -696,6 +696,7 @@ public class ControllerInfo {
     }
 
     void systemCheck(int number) {
+        /**
         System.out.println("*************************************");
         System.out.println("FileList: " + number + fileList);
         System.out.println("FileDstoreMap: " + number + fileDstoreMap);
@@ -708,6 +709,7 @@ public class ControllerInfo {
         System.out.println("DstoreRemoveMap: " + number + dstoreRemoveMap);
         System.out.println("FileIndex " + number + fileIndex);
         System.out.println("*************************************");
+            */
 
     }
 

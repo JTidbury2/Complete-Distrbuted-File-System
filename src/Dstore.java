@@ -45,6 +45,7 @@ public class Dstore {
             controllerSocket = new Socket("localhost", cport);
             controllerOut = new PrintWriter(controllerSocket.getOutputStream(), true);
             controllerOut.println("JOIN " + port);
+            setUpControllerThread(controllerSocket);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -70,17 +71,11 @@ public class Dstore {
                             System.out.println("Connection to unknown accepted");
 
                             while ((line = in.readLine()) != null) {
-                                if (line.startsWith("LIST")) {
-                                    setUpControllerThread(controllerSocket, client);
-                                    System.out.println("Controller thread started");
-                                    closeFlag = false;
-                                    break;
-                                } else {
                                     setUpClientThread(client, line);
                                     closeFlag = false;
                                     System.out.println("Client thread started");
                                     break;
-                                }
+
                             }
                             if (closeFlag) {
                                 client.close();
@@ -105,9 +100,9 @@ public class Dstore {
             "Client Thread " + client.getPort()).start();
     }
 
-    private static void setUpControllerThread(Socket client, Socket client2) {
+    private static void setUpControllerThread(Socket client) {
         System.out.println("ControllerThread " + client.getPort() + " started");
-        new Thread(new ControllerThread(client, client2, info, fileFolder),
+        new Thread(new ControllerThread(client, info, fileFolder),
             "Controller Thread " + client.getPort()).start();
     }
 
