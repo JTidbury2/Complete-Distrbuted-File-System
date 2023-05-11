@@ -69,7 +69,7 @@ public class ClientThread implements Runnable {
                 info.setFileLoadTimes(line.split(" ")[1] + client.getPort(), 0);
             }
             String[] input = line.split(" ");
-            loadCommand(input[1], info.getFileLoadTimes(input[1]+ client.getPort()) );
+            loadCommand(input[1]);
         } else if (line.startsWith("REMOVE")) {
             String[] input = line.split(" ");
             removeCommand(input[1]);
@@ -134,11 +134,11 @@ public class ClientThread implements Runnable {
     }
 
 
-    private void loadCommand(String s, int times) {
+    private void loadCommand(String s) {
         System.out.println("Load command started");
         try {
-            System.out.println("Load command started" + s + " " + times);
-            int[] fileInfo = info.getFileDStores(s, times);
+
+            int[] fileInfo = info.getFileDStores(s);
             System.out.println("Load command started" + fileInfo[0] + " " + fileInfo[1] );
             int port = fileInfo[0];
             int filesize = fileInfo[1];

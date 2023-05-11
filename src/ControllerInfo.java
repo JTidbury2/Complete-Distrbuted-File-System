@@ -41,7 +41,8 @@ public class ControllerInfo {
 
     private ArrayList<Integer> reloadAck = new ArrayList<>();
 
-    private HashMap<String, Integer> fileLoadCount = new HashMap<String, Integer>();
+    private HashMap<String, ArrayList<Integer>> fileLoadRecord = new HashMap<String,
+        ArrayList<Integer>>();
 
     private boolean rebalanveTakingPlace = false;
 
@@ -126,17 +127,22 @@ public class ControllerInfo {
 
     public void rebalance(String[] files, int port) {
 
-            setRebalanveTakingPlace(true);
-            while (!checkIndex()) {
-                try {
-                    Thread.sleep(10);
-                    systemCheck(23);
-                    System.out.println("Waiting for index to complete");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+        setRebalanveTakingPlace(true);
+        while (!checkIndex()) {
+            try {
+                Thread.sleep(10);
+                systemCheck(23);
+                System.out.println("Waiting for index to complete");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-            synchronized (fileLock) {
+        }
+        synchronized (fileLock) {
+            if ((dstoreList.size()<repFactor))    {
+                System.out.println("Not enough dstores to rebalance");
+                setRebalanveTakingPlace(false);
+                return;
+            }
             for (String file : files) {
                 if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)) {
                     fileDstoreMap.get(file).add(port);
@@ -362,7 +368,7 @@ public class ControllerInfo {
                 removeFileLoadCount(fileName);
                 removeFileFileList(fileName);
                 removeDstoreFilemap(fileName);
-                fileLoadCount.remove(fileName);
+                fileLoadRecord.remove(fileName);
                 removeAckStart();
             }
 
@@ -407,7 +413,7 @@ public class ControllerInfo {
 
     public void removeFileLoadCount(String fileName) {
         synchronized (fileLock) {
-            fileLoadCount.remove(fileName);
+            fileLoadRecord.remove(fileName);
         }
     }
 
@@ -546,7 +552,7 @@ public class ControllerInfo {
         this.cport = cport;
     }
 
-    public int[] getFileDStores(String s, int times)
+    public int[] getFileDStores(String s)
         throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
         synchronized (fileLock) {
             if (checkIndexInProgress(s, 3)) {
@@ -554,33 +560,36 @@ public class ControllerInfo {
                 throw new FileDoesNotExistException();
             }
             System.out.println(fileDstoreMap);
-            times = times - 1;
             if (!fileIndex.containsKey(s)) {
                 throw new FileDoesNotExistException();
             } else if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
-            } else if (fileDstoreMap.get(s).size() <= times) {
+            } else if (fileLoadRecord.containsKey(s) && fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))) {
 
                 throw new DStoreCantRecieveException();
             }
-            System.out.println("File: " + s + " Dstores: " + fileDstoreMap.get(s).get(times));
             int[] result = new int[2];
-            result[0] = fileDstoreMap.get(s).get(times);
+            for (int elem: fileDstoreMap.get(s)) {
+                if (!fileLoadRecord.getOrDefault(s,new ArrayList<>()).contains(elem)) {
+                    result[0] = elem;
+                    break;
+                }
+            }
             result[1] = fileSizeMap.get(s);
+            //TODO check this
+            if(!fileLoadRecord.containsKey(s)){
+                fileLoadRecord.put(s,new ArrayList<>());
+            }
+            fileLoadRecord.get(s).add(result[0]);
+
             return result;
         }
     }
 
-    public int getFileLoadTimes(String s) {
-        synchronized (fileLock) {
-            fileLoadCount.put(s, fileLoadCount.getOrDefault(s, 0) + 1);
-            return fileLoadCount.get(s);
-        }
-    }
 
     public void setFileLoadTimes(String s, int times) {
         synchronized (fileLock) {
-            fileLoadCount.put(s, times);
+            fileLoadRecord.remove(s);
         }
     }
 
@@ -813,7 +822,7 @@ public class ControllerInfo {
                         removeFileLoadCount(file);
                         removeFileFileList(file);
                         removeDstoreFilemap(file);
-                        fileLoadCount.remove(file);
+                        fileLoadRecord.remove(file);
                     }
                 }
                 reloadAck.clear();
