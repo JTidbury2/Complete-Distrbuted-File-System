@@ -552,7 +552,7 @@ public class ControllerInfo {
         this.cport = cport;
     }
 
-    public int[] getFileDStores(String s)
+    public int[] getFileDStores(String s, int port)
         throws NotEnoughDstoresException, FileDoesNotExistException, DStoreCantRecieveException {
         synchronized (fileLock) {
             if (checkIndexInProgress(s, 3)) {
@@ -564,32 +564,37 @@ public class ControllerInfo {
                 throw new FileDoesNotExistException();
             } else if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
-            } else if (fileLoadRecord.containsKey(s) && fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))) {
-
+            } else if (fileLoadRecord.containsKey(s+port) && fileLoadRecord.get(s+port).containsAll(fileDstoreMap.get(s))) {
+                System.out.println("FileLoadRecord: " + fileLoadRecord.get(s+port));
+                System.out.println("FileDstoreMap: " + fileDstoreMap.get(s));
+                System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+port).containsAll(fileDstoreMap.get(s)));
                 throw new DStoreCantRecieveException();
             }
             int[] result = new int[2];
+            if(!fileLoadRecord.containsKey(s+port)){
+                fileLoadRecord.put(s+port,new ArrayList<>());
+            }
+            System.out.println("FileLoadRecord: " + fileLoadRecord.get(s)+port);
+            System.out.println("FileDstoreMap: " + fileDstoreMap.get(s));
+            System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+port).containsAll(fileDstoreMap.get(s)));
             for (int elem: fileDstoreMap.get(s)) {
-                if (!fileLoadRecord.getOrDefault(s,new ArrayList<>()).contains(elem)) {
+                if (!fileLoadRecord.getOrDefault(s+port,new ArrayList<>()).contains(elem)) {
                     result[0] = elem;
                     break;
                 }
             }
             result[1] = fileSizeMap.get(s);
             //TODO check this
-            if(!fileLoadRecord.containsKey(s)){
-                fileLoadRecord.put(s,new ArrayList<>());
-            }
-            fileLoadRecord.get(s).add(result[0]);
+            fileLoadRecord.get(s+port).add(result[0]);
 
             return result;
         }
     }
 
 
-    public void setFileLoadTimes(String s, int times) {
+    public void setFileLoadTimes(String s, int port) {
         synchronized (fileLock) {
-            fileLoadRecord.remove(s);
+            fileLoadRecord.remove(s+port);
         }
     }
 
@@ -896,7 +901,7 @@ public class ControllerInfo {
 
     }
 
-    public void clientRemoveCommand(String fileName)
+    public boolean clientRemoveCommand(String fileName)
         throws FileDoesNotExistException, NotEnoughDstoresException {
         synchronized (fileLock) {
             if (checkIndexInProgress(fileName, 1)) {
@@ -905,6 +910,7 @@ public class ControllerInfo {
             } else if (checkFile(fileName)) {
                 removeFileFileList(fileName);
                 removeStart(fileName);
+                return true;
             } else {
                 System.out.println("File does not exist");
                 throw new FileDoesNotExistException();

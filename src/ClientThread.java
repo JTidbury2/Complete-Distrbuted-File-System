@@ -15,6 +15,8 @@ public class ClientThread implements Runnable {
 
     boolean removeTimout = false;
 
+    boolean removeMe= false;
+
 
     Socket client;
     String firstCommand;
@@ -66,7 +68,7 @@ public class ClientThread implements Runnable {
             storeCommand(input[1], input[2]);
         } else if (line.startsWith("RELOAD") || line.startsWith("LOAD")) {
             if (line.startsWith("LOAD")) {
-                info.setFileLoadTimes(line.split(" ")[1] + client.getPort(), 0);
+                info.setFileLoadTimes(line.split(" ")[1], client.getPort());
             }
             String[] input = line.split(" ");
             loadCommand(input[1]);
@@ -138,7 +140,7 @@ public class ClientThread implements Runnable {
         System.out.println("Load command started");
         try {
 
-            int[] fileInfo = info.getFileDStores(s);
+            int[] fileInfo = info.getFileDStores(s, client.getPort());
             System.out.println("Load command started" + fileInfo[0] + " " + fileInfo[1] );
             int port = fileInfo[0];
             int filesize = fileInfo[1];
@@ -158,7 +160,7 @@ public class ClientThread implements Runnable {
         removeTimout = false;
         System.out.println("Remove command started");
         try {
-            info.clientRemoveCommand(fileName);
+            removeMe=info.clientRemoveCommand(fileName);
             removeTimer = new Timer();
             removeTimer.schedule(new TimerTask() {
                 @Override
@@ -200,10 +202,11 @@ public class ClientThread implements Runnable {
                     info.removeAckWait();
                     removeTimer.cancel();
                     // TODO add timeout features for recieinving all acks and sending remove complete
-                    if (!getRemoveTimeout()) {
+                    if (!getRemoveTimeout() && removeMe) {
                         out.println("REMOVE_COMPLETE");
                         System.out.println(
                             "Client thread " + client.getPort() + " returned REMOVE_COMPLETE");
+                        removeMe=false;
                     } else {
                         System.out.println("TIMEOUT ON REMOVE");
                     }
