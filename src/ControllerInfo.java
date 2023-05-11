@@ -564,28 +564,28 @@ public class ControllerInfo {
                 throw new FileDoesNotExistException();
             } else if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
-            } else if (fileLoadRecord.containsKey(s+port) && fileLoadRecord.get(s+port).containsAll(fileDstoreMap.get(s))) {
-                System.out.println("FileLoadRecord: " + fileLoadRecord.get(s+port));
+            } else if (fileLoadRecord.containsKey(s+"?"+port) && fileLoadRecord.get(s+"?"+port).containsAll(fileDstoreMap.get(s))) {
+                System.out.println("FileLoadRecord: " + fileLoadRecord.get(s+"?"+port));
                 System.out.println("FileDstoreMap: " + fileDstoreMap.get(s));
-                System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+port).containsAll(fileDstoreMap.get(s)));
+                System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+"?"+port).containsAll(fileDstoreMap.get(s)));
                 throw new DStoreCantRecieveException();
             }
             int[] result = new int[2];
-            if(!fileLoadRecord.containsKey(s+port)){
-                fileLoadRecord.put(s+port,new ArrayList<>());
+            if(!fileLoadRecord.containsKey(s+"?"+port)){
+                fileLoadRecord.put(s+"?"+port,new ArrayList<>());
             }
             System.out.println("FileLoadRecord: " + fileLoadRecord.get(s)+port);
             System.out.println("FileDstoreMap: " + fileDstoreMap.get(s));
-            System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+port).containsAll(fileDstoreMap.get(s)));
+            System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+"?"+port).containsAll(fileDstoreMap.get(s)));
             for (int elem: fileDstoreMap.get(s)) {
-                if (!fileLoadRecord.getOrDefault(s+port,new ArrayList<>()).contains(elem)) {
+                if (!fileLoadRecord.getOrDefault(s+"?"+port,new ArrayList<>()).contains(elem)) {
                     result[0] = elem;
                     break;
                 }
             }
             result[1] = fileSizeMap.get(s);
             //TODO check this
-            fileLoadRecord.get(s+port).add(result[0]);
+            fileLoadRecord.get(s+"?"+port).add(result[0]);
 
             return result;
         }
@@ -594,7 +594,7 @@ public class ControllerInfo {
 
     public void setFileLoadTimes(String s, int port) {
         synchronized (fileLock) {
-            fileLoadRecord.remove(s+port);
+            fileLoadRecord.remove(s+"?"+port);
         }
     }
 
