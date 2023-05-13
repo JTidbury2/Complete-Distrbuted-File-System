@@ -88,7 +88,12 @@ public class DStoreThread implements Runnable {
             listCommand(files);
         } else if (line.startsWith("REBALANCE_COMPLETE")) {
             System.out.println("DStoreThread " + port + " recieved " + line);
-            info.rebalanceComplete();
+            if (!rebalanceTimout) {
+                rebalanceTimer.cancel();
+                info.rebalanceComplete();
+            }
+
+
         }
 
     }
@@ -133,16 +138,20 @@ public class DStoreThread implements Runnable {
                     files_to_send.trim();
                     files_to_remove.trim();
                     String message = "REBALANCE " + files_to_send + " " + files_to_remove;
+                    rebalanceTimout = false;
                     message.replaceAll("\\s+", " ");
                     out.println(message);
-                    /**
+                    rebalanceTimer = new Timer();
+
                     rebalanceTimer.schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            info.rebalanceTimout();
+
+                            info.rebalanceComplete();
+                            rebalanceTimout = true;
                         }
                     }, info.getTimeOut());
-                     */
+
 
                 }
             }

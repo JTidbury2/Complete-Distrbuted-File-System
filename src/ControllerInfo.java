@@ -191,7 +191,6 @@ public class ControllerInfo {
                 return;
             }
             setRebalanveTakingPlace(true);
-
         }
         System.out.println("Rebalance start");
         System.out.println("listwaitflag is " + getListWaitFlag());
@@ -258,7 +257,7 @@ public class ControllerInfo {
                 }
                 for (String file : listReturnMap.get(port)) {
                     //Don't include files without store complete
-                    if (fileIndex.get(file) != Index.STORE_COMPLETE) {
+                    if (!(fileIndex.keySet().contains(file)) || fileIndex.get(file) != Index.STORE_COMPLETE) {
                         continue;
                     }
                     //Update file list
