@@ -2,9 +2,16 @@ import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 
 public class ControllerInfo {
+
+    HashMap<Integer, Boolean> listWaitFlag = new HashMap<Integer, Boolean>();
+
+    ArrayList<Integer> rebalanceDstoreList = new ArrayList<Integer>();
+
+    boolean rebalanceFinished = true;
 
     private int cport = 0;
     private int repFactor = 0;
@@ -14,6 +21,8 @@ public class ControllerInfo {
     private boolean listFlag = true;
 
     private HashMap<String, CountDownLatch> storeLatchMap = new HashMap<String, CountDownLatch>();
+
+    private HashMap<Integer, ArrayList<String>> listReturnMap = new HashMap<Integer, ArrayList<String>>();
 
     private HashMap<String, CountDownLatch> removeLatchMap = new HashMap<String, CountDownLatch>();
     private ArrayList<Integer> dstoreList = new ArrayList<Integer>();
@@ -33,8 +42,6 @@ public class ControllerInfo {
 
 
     private HashMap<Integer, ArrayList<String>> dstoreRemoveMap = new HashMap<Integer, ArrayList<String>>();
-
-    private HashMap<Integer, ArrayList<Integer>> dstoreAddMap = new HashMap<Integer, ArrayList<Integer>>();
 
     HashMap<String, ArrayList<Integer>> dstoreNeedMap = new HashMap<>();
 
@@ -65,7 +72,23 @@ public class ControllerInfo {
     boolean removeFlag = true;
     boolean rebalanceFlag = true;
 
+    CountDownLatch rebalanceLatch;
+
     Object fileLock = new Object();
+
+    public void setListWaitFlag(int port, boolean flag) {
+        synchronized (fileLock) {
+            listWaitFlag.put(port, flag);
+        }
+    }
+
+    public boolean getListWaitFlag() {
+        synchronized (fileLock) {
+            System.out.println("listWaitFlag is " + listWaitFlag);
+            boolean temp = listWaitFlag.containsValue(false);
+            return (!temp);
+        }
+    }
 
     public void addRemoveLatchMap(String file, CountDownLatch latch) {
         synchronized (fileLock) {
@@ -147,53 +170,144 @@ public class ControllerInfo {
         }
     }
 
-    public void storeFailed(String file){
-        synchronized (fileLock){
+    public void storeFailed(String file) {
+        synchronized (fileLock) {
             removeFileIndex(file);
             removeFileDstoreMap(file);
             removeDstoreFilemap(file);
         }
     }
 
+    public void rebalanceStart() {
 
-    public void rebalance(String[] files, int port) {
+        synchronized (fileLock) {
+            if (getRebalanveTakingPlace()) {
+                System.out.println("Rebalance is taking place");
+                return;
+            }
+            if ((dstoreList.size() < repFactor)) {
+                System.out.println("Not enough dstores to rebalance");
+                isRebalanceNotify();
+                return;
+            }
+            setRebalanveTakingPlace(true);
 
-        setRebalanveTakingPlace(true);
-        while (!checkIndex()) {
+        }
+        System.out.println("Rebalance start");
+        System.out.println("listwaitflag is " + getListWaitFlag());
+
+        while ((!checkIndex()) || (!getListWaitFlag())) {
             try {
                 Thread.sleep(10);
-                systemCheck(23);
                 System.out.println("Waiting for index to complete");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+        rebalanceLatch = new CountDownLatch(dstoreList.size());
+        System.out.println("Rebalance latch count is " + rebalanceLatch.getCount());
+        rebalanceFinished = true;
+        listStart();
+
+        try {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+
+                        rebalanceFinished = rebalanceLatch.await(getTimeOut(),
+                            TimeUnit.MILLISECONDS);
+                        System.out.println("REBALANCE TIMEOUT" + rebalanceFinished);
+                        synchronized (fileLock) {
+                            if (listReturnMap.size() < repFactor) {
+                                setRebalanveTakingPlace(false);
+                                return;
+                            }
+
+                            updateRelevantMaps();
+                            systemCheck(0);
+
+                            rebalance();
+
+
+                        }
+
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }
+            }).start();
+        } catch (Exception e) {
+
+        }
+    }
+
+    private void updateRelevantMaps() {
         synchronized (fileLock) {
-            if ((dstoreList.size()<repFactor))    {
-                System.out.println("Not enough dstores to rebalance");
-                setRebalanveTakingPlace(false);
-                return;
-            }
-            for (String file : files) {
-                if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)) {
-                    fileDstoreMap.get(file).add(port);
-                } else {
-                    ArrayList<Integer> dstores = new ArrayList<Integer>();
-                    dstores.add(port);
-                    fileDstoreMap.put(file, dstores);
+            System.out.println("UPDATING RELEVANT MAPS");
+            fileList.clear();
+            fileDstoreMap.clear();
+            dstoreFileMap.clear();
+            rebalanceDstoreList.clear();
+            System.out.println("listReturnMap is " + listReturnMap);
+            for (int port : listReturnMap.keySet()) {
+                rebalanceDstoreList.add(port);
+                if (listReturnMap.get(port).size() == 0) {
+                    dstoreFileMap.put(port, new ArrayList<String>());
                 }
-                if (dstoreFileMap != null && dstoreFileMap.containsKey(port)) {
-                    dstoreFileMap.get(port).add(file);
-                } else {
-                    ArrayList<String> filesList = new ArrayList<String>();
-                    filesList.add(file);
-                    dstoreFileMap.put(port, filesList);
+                for (String file : listReturnMap.get(port)) {
+                    //Don't include files without store complete
+                    if (fileIndex.get(file) != Index.STORE_COMPLETE) {
+                        continue;
+                    }
+                    //Update file list
+                    if ((!fileList.contains(file))
+                        && fileIndex.get(file) == Index.STORE_COMPLETE) {
+                        fileList.add(file);
+                    }
+                    //Update file dstore map
+                    if (fileDstoreMap.containsKey(file)) {
+                        fileDstoreMap.get(file).add(port);
+                    } else {
+                        ArrayList<Integer> dstores = new ArrayList<Integer>();
+                        dstores.add(port);
+                        fileDstoreMap.put(file, dstores);
+                    }
+                    //Update dstore file map
+                    if (dstoreFileMap.containsKey(port)) {
+                        dstoreFileMap.get(port).add(file);
+                    } else {
+                        ArrayList<String> files = new ArrayList<String>();
+                        files.add(file);
+                        dstoreFileMap.put(port, files);
+                    }
+
                 }
+            }
+            fileIndex.clear();
+            for (String file : fileList) {
+                fileIndex.put(file, Index.STORE_COMPLETE);
+            }
+        }
 
+    }
 
+    public void listRecieved(int port, ArrayList<String> files) {
+        synchronized (fileLock) {
+            if (rebalanceFinished) {
+                listReturnMap.put(port, files);
+                rebalanceLatch.countDown();
             }
 
+        }
+    }
+
+
+    public void rebalance() {
+        synchronized (fileLock) {
             synchronized (rebalanceLock) {
+                System.out.println("REBALANCE STARTED");
                 rebalanceDStores();
                 rebalanceLock.notifyAll();
             }
@@ -232,7 +346,6 @@ public class ControllerInfo {
             return fileList.contains(fileName);
         }
     }
-
 
 
     public boolean getRemoveFlag() {
@@ -285,10 +398,12 @@ public class ControllerInfo {
     public Integer getMinStoreDstore(ArrayList<Integer> dstoreList) {
         synchronized (fileLock) {
             //TODO start again stores
-            Integer min = dstoreFileMap.getOrDefault(dstoreList.get(0), new ArrayList<>()).size();
+            Integer min = dstoreFileMap.getOrDefault(dstoreList.get(0),
+                new ArrayList<>()).size();
             Integer minDstore = dstoreList.get(0);
             for (int dstore : dstoreList) {
-                if (dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size() < min) {
+                if (dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size()
+                    < min) {
                     min = dstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size();
                     minDstore = dstore;
                 }
@@ -327,7 +442,8 @@ public class ControllerInfo {
             if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
             }
-            if (fileIndex.containsKey(name) && !(fileIndex.get(name) == Index.STORE_IN_PROGRESS)) {
+            if (fileIndex.containsKey(name) && !(fileIndex.get(name)
+                == Index.STORE_IN_PROGRESS)) {
                 throw new FileAlreadyExistsException(name);
             }
             Integer[] dstores = getStoreDStores();
@@ -341,13 +457,6 @@ public class ControllerInfo {
 
     }
 
-
-    public void rebalanceStart() {
-        synchronized (rebalanceLock) {
-            rebalanceDStores();
-            rebalanceLock.notifyAll();
-        }
-    }
 
     public void rebalanceWait() {
         synchronized (rebalanceLock) {
@@ -376,8 +485,8 @@ public class ControllerInfo {
         }
     }
 
-    public void removeFileExistance(String fileName){
-        synchronized (fileLock){
+    public void removeFileExistance(String fileName) {
+        synchronized (fileLock) {
             setFileIndex(fileName, Index.REMOVE_COMPLETE);
             removeFileDstoreMap(fileName);
             removeFileSizeMap(fileName);
@@ -419,14 +528,36 @@ public class ControllerInfo {
 
     }
 
+    private Object listLock = new Object();
+
+    public void listWait(int port) {
+        synchronized (listLock) {
+            try {
+                System.out.println("List wait");
+                setListWaitFlag(port, true);
+                listLock.wait();
+                System.out.println("List wait over");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void listStart() {
+        synchronized (listLock) {
+            System.out.println("List start");
+            listLock.notifyAll();
+        }
+    }
+
     public void removeFileLoadCount(String fileName) {
         synchronized (fileLock) {
             fileLoadRecord.remove(fileName);
         }
     }
 
-    public void storeFinished (String file){
-        synchronized (fileLock){
+    public void storeFinished(String file) {
+        synchronized (fileLock) {
             System.out.println("Store complete");
             setFileIndex(file, Index.STORE_COMPLETE);
             fileList.add(file);
@@ -461,8 +592,6 @@ public class ControllerInfo {
             }
         }
     }
-
-
 
 
     public int getCport() {
@@ -510,7 +639,9 @@ public class ControllerInfo {
 
     public void addDstore(int dstore) {
         synchronized (fileLock) {
+
             dstoreList.add(dstore);
+            System.out.println("Dstore added"+dstore);
         }
     }
 
@@ -518,11 +649,11 @@ public class ControllerInfo {
         this.cport = cport;
     }
 
-    public ArrayList<Integer> getDstorewithFile(String file){
-        synchronized (fileLock){
+    public ArrayList<Integer> getDstorewithFile(String file) {
+        synchronized (fileLock) {
             ArrayList<Integer> dstores = new ArrayList<Integer>();
-            for (Integer dstore : dstoreList){
-                if (dstoreFileMap.get(dstore).contains(file)){
+            for (Integer dstore : dstoreList) {
+                if (dstoreFileMap.get(dstore).contains(file)) {
                     dstores.add(dstore);
                 }
             }
@@ -542,28 +673,37 @@ public class ControllerInfo {
                 throw new FileDoesNotExistException();
             } else if (dstoreList.size() < repFactor) {
                 throw new NotEnoughDstoresException();
-            } else if (fileLoadRecord.containsKey(s+"?"+port) && fileLoadRecord.get(s+"?"+port).containsAll(fileDstoreMap.get(s))) {
-                System.out.println("FileLoadRecord: " + fileLoadRecord.get(s+"?"+port));
+            } else if (fileLoadRecord.containsKey(s + "?" + port) && fileLoadRecord.get(
+                s + "?" + port).containsAll(fileDstoreMap.get(s))) {
+                System.out.println(
+                    "FileLoadRecord: " + fileLoadRecord.get(s + "?" + port));
                 System.out.println("FileDstoreMap: " + fileDstoreMap.get(s));
-                System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+"?"+port).containsAll(fileDstoreMap.get(s)));
+                System.out.println(
+                    "fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))"
+                        + fileLoadRecord.get(
+                        s + "?" + port).containsAll(fileDstoreMap.get(s)));
                 throw new DStoreCantRecieveException();
             }
             int[] result = new int[2];
-            if(!fileLoadRecord.containsKey(s+"?"+port)){
-                fileLoadRecord.put(s+"?"+port,new ArrayList<>());
+            if (!fileLoadRecord.containsKey(s + "?" + port)) {
+                fileLoadRecord.put(s + "?" + port, new ArrayList<>());
             }
-            System.out.println("FileLoadRecord: " + fileLoadRecord.get(s)+port);
+            System.out.println("FileLoadRecord: " + fileLoadRecord.get(s) + port);
             System.out.println("FileDstoreMap: " + fileDstoreMap.get(s));
-            System.out.println("fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))" + fileLoadRecord.get(s+"?"+port).containsAll(fileDstoreMap.get(s)));
-            for (int elem: fileDstoreMap.get(s)) {
-                if (!fileLoadRecord.getOrDefault(s+"?"+port,new ArrayList<>()).contains(elem)) {
+            System.out.println(
+                "fileLoadRecord.get(s).containsAll(fileDstoreMap.get(s))"
+                    + fileLoadRecord.get(
+                    s + "?" + port).containsAll(fileDstoreMap.get(s)));
+            for (int elem : fileDstoreMap.get(s)) {
+                if (!fileLoadRecord.getOrDefault(s + "?" + port, new ArrayList<>())
+                    .contains(elem)) {
                     result[0] = elem;
                     break;
                 }
             }
             result[1] = fileSizeMap.get(s);
             //TODO check this
-            fileLoadRecord.get(s+"?"+port).add(result[0]);
+            fileLoadRecord.get(s + "?" + port).add(result[0]);
 
             return result;
         }
@@ -572,7 +712,7 @@ public class ControllerInfo {
 
     public void setFileLoadTimes(String s, int port) {
         synchronized (fileLock) {
-            fileLoadRecord.remove(s+"?"+port);
+            fileLoadRecord.remove(s + "?" + port);
         }
     }
 
@@ -580,7 +720,8 @@ public class ControllerInfo {
     public void updateDstoreFiles(String[] files, int port) {
         synchronized (fileLock) {
             for (String file : files) {
-                if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file).contains(port)) {
+                if (fileDstoreMap.containsKey(file) && !fileDstoreMap.get(file)
+                    .contains(port)) {
                     fileDstoreMap.get(file).add(port);
                 } else {
                     ArrayList<Integer> dstores = new ArrayList<Integer>();
@@ -636,7 +777,8 @@ public class ControllerInfo {
                         for (int dstore : dstoreNeedMap.get(file)) {
                             tempResult += dstore + " ";
                         }
-                        tempResult = file + " " + dstoreNeedMap.get(file).size() + " " + tempResult;
+                        tempResult = file + " " + dstoreNeedMap.get(file).size() + " "
+                            + tempResult;
                         tempResult.trim();
                         result += tempResult + " ";
                     }
@@ -664,7 +806,6 @@ public class ControllerInfo {
 
             createRemoveMap();
             createNeedMap();
-            systemCheck(3);
             new2DstoreFileMap = new HashMap<>(dstoreFileMap);
             fileDstoreMap = new HashMap<>(newFileDstoreMap);
             dstoreFileMap = new HashMap<>(newDstoreFileMap);
@@ -674,20 +815,20 @@ public class ControllerInfo {
     }
 
     void systemCheck(int number) {
-        /**
-        System.out.println("*************************************");
-        System.out.println("FileList: " + number + fileList);
-        System.out.println("FileDstoreMap: " + number + fileDstoreMap);
-        System.out.println("newFileDstoreMap: " + number + newFileDstoreMap);
-        System.out.println("DstoreFileMap: " + number + dstoreFileMap);
-        System.out.println("newDstoreFileMap: " + number + newDstoreFileMap);
-        System.out.println("fileSizeMap: " + number + fileSizeMap);
-        System.out.println("DstoreList: " + number + dstoreList);
-        System.out.println("DstoreNeedMap: " + number + dstoreNeedMap);
-        System.out.println("DstoreRemoveMap: " + number + dstoreRemoveMap);
-        System.out.println("FileIndex " + number + fileIndex);
-        System.out.println("*************************************");
-            */
+
+         System.out.println("*************************************");
+         System.out.println("FileList: " + number + fileList);
+         System.out.println("FileDstoreMap: " + number + fileDstoreMap);
+         System.out.println("newFileDstoreMap: " + number + newFileDstoreMap);
+         System.out.println("DstoreFileMap: " + number + dstoreFileMap);
+         System.out.println("newDstoreFileMap: " + number + newDstoreFileMap);
+         System.out.println("fileSizeMap: " + number + fileSizeMap);
+         System.out.println("DstoreList: " + number + dstoreList);
+         System.out.println("DstoreNeedMap: " + number + dstoreNeedMap);
+         System.out.println("DstoreRemoveMap: " + number + dstoreRemoveMap);
+         System.out.println("FileIndex " + number + fileIndex);
+         System.out.println("*************************************");
+
 
     }
 
@@ -719,7 +860,8 @@ public class ControllerInfo {
                 ArrayList<String> files = new ArrayList<>(dstoreFileMap.get(dstore));
                 for (String file : files) {
                     if (!newDstoreFileMap.get(dstore).contains(file)) {
-                        if (dstoreRemoveMap.containsKey(dstore) && !dstoreRemoveMap.get(dstore)
+                        if (dstoreRemoveMap.containsKey(dstore) && !dstoreRemoveMap.get(
+                                dstore)
                             .contains(file)) {
                             dstoreRemoveMap.get(dstore).add(file);
                         } else if (!dstoreRemoveMap.containsKey(dstore)) {
@@ -739,7 +881,6 @@ public class ControllerInfo {
     public boolean checkIndexInProgress(String fileName, int command)
         throws NotEnoughDstoresException {
         synchronized (fileLock) {
-            systemCheck(00);
             boolean result = (fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS
                 || fileIndex.get(fileName) == Index.STORE_IN_PROGRESS);
             if (!result) {
@@ -757,7 +898,7 @@ public class ControllerInfo {
     public void getRebalanceDstores(String file) {
 
         ArrayList<Integer> currentDstores = new ArrayList<>();
-        ArrayList<Integer> allDstores = new ArrayList<>(dstoreList);
+        ArrayList<Integer> allDstores = new ArrayList<>(dstoreFileMap.keySet());
         for (int k = 0; k < repFactor; k++) {
             Integer minDstore = getMinDstore(allDstores);
             currentDstores.add(minDstore);
@@ -779,7 +920,8 @@ public class ControllerInfo {
 
     public Integer getMinDstore(ArrayList<Integer> dstoreList) {
         //TODO start again stores
-        Integer min = newDstoreFileMap.getOrDefault(dstoreList.get(0), new ArrayList<>()).size();
+        Integer min = newDstoreFileMap.getOrDefault(dstoreList.get(0),
+            new ArrayList<>()).size();
         Integer minDstore = dstoreList.get(0);
         for (int dstore : dstoreList) {
             if (newDstoreFileMap.getOrDefault(dstore, new ArrayList<>()).size() < min) {
@@ -797,8 +939,8 @@ public class ControllerInfo {
                 reloadAck.add(1);
             }
             System.out.println("Reload ack size: " + reloadAck.size());
-            System.out.println("Dstore list size: " + dstoreList.size());
-            if (reloadAck.size() == dstoreList.size()) {
+            System.out.println("Dstore list size: " + rebalanceDstoreList.size());
+            if (reloadAck.size() == rebalanceDstoreList.size()) {
                 for (String file : fileList) {
                     if (fileIndex.get(file) == Index.REMOVE_IN_PROGRESS) {
                         setFileIndex(file, Index.REMOVE_COMPLETE);
@@ -903,7 +1045,8 @@ public class ControllerInfo {
                 ArrayList<String> files = new ArrayList<>(dstoreFileMap.get(port));
                 for (String file : files) {
                     if (fileDstoreMap.containsKey(file)) {
-                        ArrayList<Integer> dstores = new ArrayList<>(fileDstoreMap.get(file));
+                        ArrayList<Integer> dstores = new ArrayList<>(
+                            fileDstoreMap.get(file));
                         dstores.remove((Integer) port);
                         System.out.println("Dstores size: " + dstores.size());
                         System.out.println("File: " + file);
@@ -943,7 +1086,6 @@ public class ControllerInfo {
             removeDstoreFileDstore(port);
             removeDstoreDstoreFileMap(port);
             removeDstoreReloadLists(port);
-            systemCheck(66);
         }
     }
 

@@ -74,6 +74,7 @@ public class ControllerThread implements Runnable {
         if (!info.checkFileExist(s)) {
             out.println("ERROR_FILE_DOES_NOT_EXIST " + s);
         }
+        info.removeFile(s);
         File folder = new File(System.getProperty("user.dir"), folderName);
         File file = new File(folder, s);
         if (file.delete()) {
@@ -84,7 +85,6 @@ public class ControllerThread implements Runnable {
         } else {
             System.out.println("Failed to delete the file " + s);
         }
-        info.removeFile(s);
     }
 
     private void rebalance(String[] s) {

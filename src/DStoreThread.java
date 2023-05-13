@@ -3,11 +3,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class DStoreThread implements Runnable {
+    boolean listWatcher = true;
 
     Timer rebalanceTimer = new Timer();
 
@@ -33,10 +35,14 @@ public class DStoreThread implements Runnable {
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(client.getOutputStream(), true);
-            startThreadWaiters();
-            out.println("LIST");
+            info.setListWaitFlag(port,false);
+
 
             System.out.println("DStoreThread " + port + " started");
+            boolean temp = startThreadWaiters();
+            if (temp) {
+                info.rebalanceStart();
+            }
 
             while ((line = in.readLine()) != null) {
                 System.out.println("DStore " + port + "recieved: " + line);
@@ -78,6 +84,7 @@ public class DStoreThread implements Runnable {
             String[] input = line.split(" ");
             String[] files = Arrays.copyOfRange(input, 1, input.length);
             System.out.println("DStoreThread " + port + " recieved " + line);
+            listWatcher=true;
             listCommand(files);
         } else if (line.startsWith("REBALANCE_COMPLETE")) {
             System.out.println("DStoreThread " + port + " recieved " + line);
@@ -95,10 +102,11 @@ public class DStoreThread implements Runnable {
     }
 
     private void listCommand(String[] files) {
-        info.rebalance(files, port);
+        ArrayList<String> returnFiles =new ArrayList<>(Arrays.asList(files)) ;
+        info.listRecieved(port, returnFiles);
     }
 
-    private void startThreadWaiters() {
+    private boolean startThreadWaiters() {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -127,16 +135,37 @@ public class DStoreThread implements Runnable {
                     String message = "REBALANCE " + files_to_send + " " + files_to_remove;
                     message.replaceAll("\\s+", " ");
                     out.println(message);
+                    /**
                     rebalanceTimer.schedule(new TimerTask() {
                         @Override
                         public void run() {
                             info.rebalanceTimout();
                         }
                     }, info.getTimeOut());
+                     */
 
                 }
             }
         }, "Store Start Watcher Thread").start();
+
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    System.out.println("List watcher started"  + port);
+
+                    info.listWait(port);
+                    if (listWatcher) {
+                        out.println("LIST");
+                        System.out.println("LIST sent" + port);
+                    }
+
+                }
+            }
+        }, "LIST Start Watcher Thread").start();
+
+        return true;
 
 
     }

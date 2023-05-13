@@ -32,7 +32,7 @@ public class Controller {
             @Override
             public void run() {
                 System.out.println("Rebalance timer started");
-                info.rebalance(new String[0],0);
+                info.rebalanceStart();
 
             }
         },info.getRebalanceTime(), info.getRebalanceTime());
