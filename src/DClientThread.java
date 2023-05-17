@@ -136,9 +136,11 @@ public class DClientThread implements Runnable {
             System.out.println("DClient thread " + client.getPort() + " File sent");
 
         } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+            System.out.println("DSTore file does not exist");
+            client.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("DSTore file does not exist");
+            client.close();
         }
 
 

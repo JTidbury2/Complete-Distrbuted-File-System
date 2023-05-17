@@ -1,11 +1,45 @@
 import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 
 public class ControllerInfo {
+    Timer timer = new Timer();
+
+    ArrayList<Integer> occuringDstoreList = new ArrayList<Integer>();
+
+    public void putOccuringDstoreList(int port){
+        occuringDstoreList.add(port);
+    }
+
+    public void removeOccuringDstoreList(int port){
+        occuringDstoreList.remove(port);
+    }
+
+    public int getOccuringDstoreListSize(){
+        return occuringDstoreList.size();
+    }
+
+    public ControllerInfo(int cport, int repFactor, int timeOut, int rebalanceTime) {
+        this.cport = cport;
+        this.repFactor = repFactor;
+        this.timeOut = timeOut;
+        this.rebalanceTime = rebalanceTime;
+
+
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("Rebalance timer started");
+                rebalanceStart();
+
+            }
+        },getRebalanceTime(),getRebalanceTime());
+    }
 
     HashMap<Integer, Boolean> listWaitFlag = new HashMap<Integer, Boolean>();
 
@@ -69,6 +103,8 @@ public class ControllerInfo {
 
     private String addFile = null;
 
+    int listWaitSize = 0;
+
     boolean removeFlag = true;
     boolean rebalanceFlag = true;
 
@@ -85,6 +121,7 @@ public class ControllerInfo {
     public boolean getListWaitFlag() {
         synchronized (fileLock) {
             System.out.println("listWaitFlag is " + listWaitFlag);
+            listWaitSize = listWaitFlag.size();
             boolean temp = listWaitFlag.containsValue(false);
             return (!temp);
         }
@@ -160,6 +197,7 @@ public class ControllerInfo {
     public void isRebalanceNotify() {
         synchronized (isRebalanceLock) {
             isRebalanceLock.notifyAll();
+            System.out.println("All notified");
         }
     }
 
@@ -175,10 +213,12 @@ public class ControllerInfo {
             removeFileIndex(file);
             removeFileDstoreMap(file);
             removeDstoreFilemap(file);
+            removeOccuringDstoreList(0);
         }
     }
 
     public void rebalanceStart() {
+
 
         synchronized (fileLock) {
             if (getRebalanveTakingPlace()) {
@@ -191,6 +231,7 @@ public class ControllerInfo {
                 return;
             }
             setRebalanveTakingPlace(true);
+            timer.cancel();
         }
         System.out.println("Rebalance start");
         System.out.println("listwaitflag is " + getListWaitFlag());
@@ -203,7 +244,7 @@ public class ControllerInfo {
                 e.printStackTrace();
             }
         }
-        rebalanceLatch = new CountDownLatch(dstoreList.size());
+        rebalanceLatch = new CountDownLatch(listWaitSize);
         System.out.println("Rebalance latch count is " + rebalanceLatch.getCount());
         rebalanceFinished = true;
         listStart();
@@ -256,13 +297,9 @@ public class ControllerInfo {
                     dstoreFileMap.put(port, new ArrayList<String>());
                 }
                 for (String file : listReturnMap.get(port)) {
-                    //Don't include files without store complete
-                    if (!(fileIndex.keySet().contains(file)) || fileIndex.get(file) != Index.STORE_COMPLETE) {
-                        continue;
-                    }
                     //Update file list
                     if ((!fileList.contains(file))
-                        && fileIndex.get(file) == Index.STORE_COMPLETE) {
+                        && fileIndex.containsKey(file) &&fileIndex.get(file) == Index.STORE_COMPLETE) {
                         fileList.add(file);
                     }
                     //Update file dstore map
@@ -315,24 +352,7 @@ public class ControllerInfo {
 
     private boolean checkIndex() {
         synchronized (fileLock) {
-            boolean result = false;
-            if (fileIndex.size() == 0) {
-                System.out.println("Index is empty");
-                return true;
-            }
-            int count = 0;
-            for (String fileName : fileIndex.keySet()) {
-                if (!(fileIndex.get(fileName) == Index.STORE_IN_PROGRESS)
-                    && !(fileIndex.get(fileName) == Index.REMOVE_IN_PROGRESS)) {
-                    count++;
-                }
-            }
-            if (count == fileIndex.size()) {
-                result = true;
-            }
-            System.out.println("Index is" + fileIndex);
-            System.out.println("Count is " + count);
-            return result;
+            return getOccuringDstoreListSize()==0;
         }
     }
 
@@ -493,6 +513,7 @@ public class ControllerInfo {
             removeFileFileList(fileName);
             removeDstoreFilemap(fileName);
             fileLoadRecord.remove(fileName);
+            removeOccuringDstoreList(0);
         }
     }
 
@@ -560,6 +581,7 @@ public class ControllerInfo {
             System.out.println("Store complete");
             setFileIndex(file, Index.STORE_COMPLETE);
             fileList.add(file);
+            removeOccuringDstoreList(0);
         }
     }
 
@@ -573,6 +595,7 @@ public class ControllerInfo {
         synchronized (removeLock) {
             removeFile = file;
             removeLock.notifyAll();
+
 
             System.out.println("Remove start");
         }
@@ -954,6 +977,15 @@ public class ControllerInfo {
                 reloadAck.clear();
                 setRebalanveTakingPlace(false);
                 isRebalanceNotify();
+                timer= new Timer();
+                timer.scheduleAtFixedRate(new TimerTask() {
+                    @Override
+                    public void run() {
+                        System.out.println("Rebalance timer started");
+                        rebalanceStart();
+
+                    }
+                },getRebalanceTime(),getRebalanceTime());
                 System.out.println("Rebalance complete");
             }
 
@@ -1015,6 +1047,7 @@ public class ControllerInfo {
             updateFileSize(fileName, Integer.parseInt(fileSize));
             String message = null;
             message = storeTo(fileName);
+            putOccuringDstoreList(0);
             return message;
 
 
@@ -1030,7 +1063,7 @@ public class ControllerInfo {
                 throw new FileDoesNotExistException();
             } else if (checkFile(fileName)) {
                 removeFileFileList(fileName);
-                removeStart(fileName);
+                putOccuringDstoreList(0);
             } else {
                 System.out.println("File does not exist");
                 throw new FileDoesNotExistException();
@@ -1089,5 +1122,10 @@ public class ControllerInfo {
     }
 
 
+    public void removeFailed(String fileName) {
+        synchronized(fileLock){
+            removeOccuringDstoreList(0);
+        }
+    }
 }
 

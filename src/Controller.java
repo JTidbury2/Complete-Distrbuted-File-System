@@ -11,7 +11,7 @@ import java.util.TimerTask;
 
 public class Controller {
 
-    static ControllerInfo info = new ControllerInfo();
+    static ControllerInfo info ;
     static ServerSocket ss;
     static int cport = 0;
     static int repFactor = 0;
@@ -23,19 +23,7 @@ public class Controller {
         repFactor = Integer.parseInt(args[1]);
         timeOut = Integer.parseInt(args[2]);
         rebalanceTime = Integer.parseInt(args[3]);
-        info.setCport(cport);
-        info.setRepFactor(repFactor);
-        info.setTimeOut(timeOut);
-        info.setRebalanceTime(rebalanceTime);
-        Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                System.out.println("Rebalance timer started");
-                info.rebalanceStart();
-
-            }
-        },info.getRebalanceTime(), info.getRebalanceTime());
+        info= new ControllerInfo(cport,repFactor,timeOut,rebalanceTime);
         setUpCPort();
     }
 
@@ -72,6 +60,7 @@ public class Controller {
                             System.out.println("Connection to unknown accepted");
                             while ((line = in.readLine()) != null) {
                                 if (line.startsWith("JOIN")) {
+
                                     String[] split = line.split(" ");
                                     String dstore = split[1];
                                     info.addDstore(Integer.parseInt(dstore));

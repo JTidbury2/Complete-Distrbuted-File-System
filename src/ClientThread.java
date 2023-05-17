@@ -15,7 +15,7 @@ public class ClientThread implements Runnable {
 
     Timer removeTimer = new Timer();
 
-    boolean removeTimout = false;
+
 
     boolean removeMe= false;
 
@@ -97,6 +97,7 @@ public class ClientThread implements Runnable {
         info.systemCheck(69);
         try {
             message = info.clientStoreCommand(fileName, fileSize);
+
         } catch (NotEnoughDstoresException e) {
             message = "ERROR_NOT_ENOUGH_DSTORES";
             out.println(message);
@@ -152,14 +153,14 @@ public class ClientThread implements Runnable {
     }
 
     private void removeCommand(String fileName) {
-        removeTimout = false;
         System.out.println("Remove command started");
         try {
-
             info.clientRemoveCommand(fileName);
+
             CountDownLatch removeLatch = new CountDownLatch(info.getRepFactor());
             info.addRemoveLatchMap(fileName, removeLatch);
 
+            info.removeStart(fileName);
             boolean completeRemove = removeLatch.await(info.getTimeOut(), TimeUnit.MILLISECONDS);
             if (completeRemove){
                 System.out.println("Remove complete");
@@ -168,6 +169,7 @@ public class ClientThread implements Runnable {
                 System.out.println(
                     "Client thread " + client.getPort() + " returned REMOVE_COMPLETE");
             }else{
+                info.removeFailed(fileName);
                 System.out.println("TIMEOUT ON REMOVE");
             }
 
@@ -181,17 +183,7 @@ public class ClientThread implements Runnable {
         }
     }
 
-    private boolean getRemoveTimeout() {
-        synchronized (this) {
-            return removeTimout;
-        }
-    }
 
-    private void setRemoveTimeout(boolean removeTimout) {
-        synchronized (this) {
-            this.removeTimout = removeTimout;
-        }
-    }
 
 
 
