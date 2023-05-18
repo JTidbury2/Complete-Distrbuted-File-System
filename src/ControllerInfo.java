@@ -247,6 +247,7 @@ public class ControllerInfo {
         rebalanceLatch = new CountDownLatch(listWaitSize);
         System.out.println("Rebalance latch count is " + rebalanceLatch.getCount());
         rebalanceFinished = true;
+        listReturnMap.clear();
         listStart();
 
         try {
@@ -261,6 +262,15 @@ public class ControllerInfo {
                         synchronized (fileLock) {
                             if (listReturnMap.size() < repFactor) {
                                 setRebalanveTakingPlace(false);
+                                timer= new Timer();
+                                timer.scheduleAtFixedRate(new TimerTask() {
+                                    @Override
+                                    public void run() {
+                                        System.out.println("Rebalance timer started");
+                                        rebalanceStart();
+
+                                    }
+                                },getRebalanceTime(),getRebalanceTime());
                                 return;
                             }
 
@@ -675,7 +685,7 @@ public class ControllerInfo {
         synchronized (fileLock) {
             ArrayList<Integer> dstores = new ArrayList<Integer>();
             for (Integer dstore : dstoreList) {
-                if (dstoreFileMap.get(dstore).contains(file)) {
+                if (dstoreFileMap.containsKey(dstore) && dstoreFileMap.get(dstore).contains(file)) {
                     dstores.add(dstore);
                 }
             }
@@ -1118,6 +1128,15 @@ public class ControllerInfo {
             removeDstoreFileDstore(port);
             removeDstoreDstoreFileMap(port);
             removeDstoreReloadLists(port);
+            removeListWaitFlag(port);
+        }
+    }
+
+    public void removeListWaitFlag(int port) {
+        synchronized (fileLock) {
+            if (listWaitFlag.containsKey(port)) {
+                listWaitFlag.remove((Integer) port);
+            }
         }
     }
 

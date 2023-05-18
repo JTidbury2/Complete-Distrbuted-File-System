@@ -58,6 +58,7 @@ public class DStoreThread implements Runnable {
             if (client != null && !client.isClosed()) {
                 try {
                     client.close();
+                    closeDstore();
                     System.out.println("DStore thread " + port + " closed client");
                 } catch (IOException e1) {
                     System.out.println("client failed to close");
