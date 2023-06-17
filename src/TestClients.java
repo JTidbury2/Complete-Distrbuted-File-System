@@ -6,7 +6,7 @@ import java.util.Random;
  *  develop other client classes to test your Controller and Dstores thoroughly. You are not expected to include client 
  *  code in your submission.
  */
-public class ClientMain {
+public class TestClients {
 	
 	public static void main(String[] args) throws Exception{
 

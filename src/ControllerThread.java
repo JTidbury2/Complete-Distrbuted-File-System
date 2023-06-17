@@ -6,18 +6,26 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
-
+/**
+ * This class represents a thread for handling Controller related tasks.
+ * It manages connections, handles commands, and performs file operations.
+ */
 public class ControllerThread implements Runnable {
 
-    Socket controller;
+    Socket controller; // Socket for controller connection
+    Socket dstoreIn; // Socket for DStore connection
+    DStoreInfo info; // Object containing DStore related information
+    PrintWriter out = null; // Output stream for the controller socket
+    BufferedReader in = null; // Input stream for the DStore socket
 
-    Socket dstoreIn;
-    DStoreInfo info;
-    PrintWriter out = null;
-    BufferedReader in = null;
-
-    String folderName;
-
+    String folderName; // Folder name to perform operations in
+    /**
+     * Initializes a new ControllerThread object.
+     *
+     * @param controller Socket for controller connection
+     * @param infos      DStoreInfo object
+     * @param folderName Name of the folder
+     */
     public ControllerThread(Socket controller,DStoreInfo infos,
         String folderName) {
         this.controller = controller;
@@ -25,7 +33,10 @@ public class ControllerThread implements Runnable {
         info = infos;
         this.folderName = folderName;
     }
-
+    /**
+     * This is the entry point for the thread.
+     * It performs controller operations until the connection closes.
+     */
     @Override
     public void run() {
         try {
@@ -47,7 +58,11 @@ public class ControllerThread implements Runnable {
         }
 
     }
-
+    /**
+     * This method handles the received commands from the input stream.
+     *
+     * @param line String representing the command.
+     */
     private void handleCommand(String line) {
         System.out.println("***********Controller thread recieved " + line);
         if (line.startsWith("REMOVE")) {
@@ -68,7 +83,12 @@ public class ControllerThread implements Runnable {
             out.println("LIST " + info.getFiles());
         }
     }
-
+    /**
+     * This method removes a file from the specified folder.
+     *
+     * @param s        File name to be removed
+     * @param isRemove Flag to check if the file should be removed
+     */
     private void removeFile(String s,boolean isRemove) {
 
         if (!info.checkFileExist(s)) {
@@ -86,7 +106,11 @@ public class ControllerThread implements Runnable {
             System.out.println("Failed to delete the file " + s);
         }
     }
-
+    /**
+     * This method handles the rebalance command.
+     *
+     * @param s Parameters for the rebalance operation
+     */
     private void rebalance(String[] s) {
         if (s.length < 2) {
             System.out.println("Rebalance complete list too short");
@@ -131,7 +155,13 @@ public class ControllerThread implements Runnable {
         System.out.println("LIST OF FILES" + info.getFiles());
         out.println("REBALANCE_COMPLETE");
     }
-
+    /**
+     * This method sends a rebalance message to another DStore.
+     *
+     * @param port     Port number of the DStore to send the message to
+     * @param message  The rebalance message
+     * @param fileName The name of the file to be rebalanced
+     */
     private void rebalanceMessage(int port, String message, String fileName) {
         new Thread(new Runnable() {
             @Override
@@ -176,7 +206,9 @@ public class ControllerThread implements Runnable {
 
     }
 
-
+    /**
+     * This method starts waiting threads to handle asynchronous tasks.
+     */
     private void startThreadWaiters() {
         new Thread(new Runnable() {
             @Override

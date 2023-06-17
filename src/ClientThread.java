@@ -13,11 +13,6 @@ import java.util.concurrent.TimeUnit;
 
 public class ClientThread implements Runnable {
 
-    Timer removeTimer = new Timer();
-
-
-
-    boolean removeMe= false;
 
 
     Socket client;
@@ -38,6 +33,7 @@ public class ClientThread implements Runnable {
     public void run() {
 
         try {
+            //set up input and output streams
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
@@ -59,7 +55,10 @@ public class ClientThread implements Runnable {
             e.printStackTrace();
         }
     }
-
+    /**
+     * Handles the commands sent by the client, sends relevant data to different methods
+     * @param line The command sent by the client represented as a string
+     */
     private void handleCommand(String line) {
         info.checkRebalanceTakingPlace();
         if (line.startsWith("LIST")) {
@@ -79,6 +78,10 @@ public class ClientThread implements Runnable {
         }
     }
 
+    /**
+     * Lists the files in the system if possible
+     */
+
     private void listCommand() {
         System.out.println("List command started");
         String message = null;
@@ -91,10 +94,14 @@ public class ClientThread implements Runnable {
         System.out.println("Client thread returned" + message);
     }
 
+    /** Stores a file in the Dstore system if possible
+     * @param fileName The name of the file to be stored. If it is shared then it cannot be added to the system
+     * @param fileSize The size of the file to be stored
+     */
+
     private void storeCommand(String fileName, String fileSize) {
         System.out.println("Store command started");
         String message = null;
-        info.systemCheck(69);
         try {
             message = info.clientStoreCommand(fileName, fileSize);
 
@@ -107,10 +114,11 @@ public class ClientThread implements Runnable {
             out.println(message);
             return;
         }
+        //sent message to show which dstores to send the file to
         out.println(message);
         System.out.println("Client thread " + client.getPort() + " returned " + message);
 
-
+        //set up the store latch and wait for the dstores to respond
         CountDownLatch clientLatch = new CountDownLatch(info.getRepFactor());
         info.addStoreLatchMap(fileName, clientLatch);
         try {
@@ -131,12 +139,16 @@ public class ClientThread implements Runnable {
 
     }
 
-
-    private void loadCommand(String s) {
+    /**
+     * Loads a file from the system when the load command is received from a client
+     *
+     * @param fileName the name of the file to be loaded
+     */
+    private void loadCommand(String fileName) {
         System.out.println("Load command started");
         try {
-
-            int[] fileInfo = info.getFileDStores(s, client.getPort());
+            //get the dstores that have the file and send the load command to the client
+            int[] fileInfo = info.getFileDStores(fileName, client.getPort());
             System.out.println("Load command started" + fileInfo[0] + " " + fileInfo[1] );
             int port = fileInfo[0];
             int filesize = fileInfo[1];
@@ -148,19 +160,27 @@ public class ClientThread implements Runnable {
         } catch (FileDoesNotExistException e) {
             out.println("ERROR_FILE_DOES_NOT_EXIST");
         } catch (DStoreCantRecieveException e) {
+            //occurs when no more possible dstores could have the file
             out.println("ERROR_LOAD");
         }
     }
 
+    /**
+     * Removes a file from the system when the remove command is received from a client
+     * @param fileName the name of the file to be removed
+     */
+
     private void removeCommand(String fileName) {
         System.out.println("Remove command started");
         try {
+            //set up the remove latch and send the remove command to the dstores
             info.clientRemoveCommand(fileName);
 
             CountDownLatch removeLatch = new CountDownLatch(info.getRepFactor());
             info.addRemoveLatchMap(fileName, removeLatch);
 
             info.removeStart(fileName);
+            //wait for the dstores to respond to the remove command
             boolean completeRemove = removeLatch.await(info.getTimeOut(), TimeUnit.MILLISECONDS);
             if (completeRemove){
                 System.out.println("Remove complete");
@@ -172,7 +192,7 @@ public class ClientThread implements Runnable {
                 info.removeFailed(fileName);
                 System.out.println("TIMEOUT ON REMOVE");
             }
-
+            //catch the errors that can be thrown by the dstores
         } catch (NotEnoughDstoresException e) {
             out.println("ERROR_NOT_ENOUGH_DSTORES");
 

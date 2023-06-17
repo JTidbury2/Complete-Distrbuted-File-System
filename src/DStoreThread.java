@@ -7,7 +7,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
-
+/**
+ * Class representing a thread for a distributed store. It communicates
+ * with the Controller and handles different types of commands.
+ */
 public class DStoreThread implements Runnable {
     boolean listWatcher = true;
 
@@ -19,13 +22,21 @@ public class DStoreThread implements Runnable {
     int port;
     ControllerInfo info;
     PrintWriter out = null;
-
+    /**
+     * Constructor for DStoreThread.
+     * @param client The client socket.
+     * @param port The port number.
+     * @param infos The information about the controller.
+     */
     public DStoreThread(Socket client, int port, ControllerInfo infos) {
         this.client = client;
         this.port = port;
         info = infos;
     }
-
+    /**
+     * The run method is called when the thread starts. It reads commands
+     * from the Controller and handles them accordingly.
+     */
     @Override
     public void run() {
         BufferedReader in = null;
@@ -69,11 +80,16 @@ public class DStoreThread implements Runnable {
         }
 
     }
-
+    /**
+     * This method is used to remove the DStore from the Controller's list.
+     */
     private void closeDstore() {
         info.removeDstore(port);
     }
-
+    /**
+     * Handles commands sent by the Controller.
+     * @param line The command string.
+     */
     private void handleCommand(String line) {
         if (line.startsWith("STORE_ACK")) {
             System.out.println("DStoreThread " + port + " recieved " + line);
@@ -98,20 +114,34 @@ public class DStoreThread implements Runnable {
         }
 
     }
-
+    /**
+     * Handles the "STORE_ACK" command.
+     * @param line The command string.
+     */
     private void storeAckCommand(String line) {
         info.dstoreStoreAckCommmand(line, port);
     }
-
+    /**
+     * Handles the "REMOVE_ACK" command.
+     * @param line The command string.
+     */
     private void removeAckCommand(String line) {
         info.dstoreRemoveAckCommmand(line);
     }
-
+    /**
+     * Handles the "LIST" command.
+     * @param files The list of files sent in the command.
+     */
     private void listCommand(String[] files) {
         ArrayList<String> returnFiles =new ArrayList<>(Arrays.asList(files)) ;
         info.listRecieved(port, returnFiles);
     }
-
+    /**
+     * Starts threads that handle different conditions in the program.
+     * Each thread waits for a certain condition to become true, then
+     * performs a specific task.
+     * @return Always returns true.
+     */
     private boolean startThreadWaiters() {
         new Thread(new Runnable() {
             @Override
@@ -141,17 +171,20 @@ public class DStoreThread implements Runnable {
                     String message = "REBALANCE " + files_to_send + " " + files_to_remove;
                     rebalanceTimout = false;
                     message.replaceAll("\\s+", " ");
-                    out.println(message);
                     rebalanceTimer = new Timer();
+                    out.println(message);
+                    try {
+                        rebalanceTimer.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
 
-                    rebalanceTimer.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-
-                            info.rebalanceComplete();
-                            rebalanceTimout = true;
-                        }
-                    }, info.getTimeOut());
+                                info.rebalanceComplete();
+                                rebalanceTimout = true;
+                            }
+                        }, info.getTimeOut());
+                    } catch (IllegalStateException e){
+                        System.out.println("Timer already cancelled");
+                    }
 
 
                 }

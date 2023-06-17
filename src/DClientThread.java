@@ -10,26 +10,39 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Arrays;
-
+/**
+ * This class represents a thread for handling DStore client related tasks.
+ * It manages connections, handles commands, and performs file operations.
+ */
 public class DClientThread implements Runnable {
 
-    Socket client;
-    String firstCommand;
+    Socket client; // Socket for client connection
+    String firstCommand; // First command from client
 
-    OutputStream fileOut = null;
-    PrintWriter out = null;
-    BufferedReader in = null;
-    InputStream inStream = null;
-    DStoreInfo info;
-    String fileFolder;
-
+    OutputStream fileOut = null; // Output stream for file operations
+    PrintWriter out = null; // Output stream for the client socket
+    BufferedReader in = null; // Input stream for the client socket
+    InputStream inStream = null; // Input stream for file operations
+    DStoreInfo info; // Object containing DStore related information
+    String fileFolder; // Folder name to perform operations in
+    /**
+     * Initializes a new DClientThread object.
+     *
+     * @param client     Socket for client connection
+     * @param line       First command from client
+     * @param infos      DStoreInfo object
+     * @param fileFolder Name of the folder
+     */
     public DClientThread(Socket client, String line, DStoreInfo infos, String fileFolder) {
         this.client = client;
         this.firstCommand = line;
         info = infos;
         this.fileFolder = fileFolder;
     }
-
+    /**
+     * This is the entry point for the thread.
+     * It performs DStore client operations until the connection closes.
+     */
     @Override
     public void run() {
         try {
@@ -55,7 +68,12 @@ public class DClientThread implements Runnable {
         }
 
     }
-
+    /**
+     * This method handles the received commands from the input stream.
+     *
+     * @param line String representing the command.
+     * @throws IOException if there is an issue with the input or output stream
+     */
     private void handleCommand(String line) throws IOException {
         if (line.startsWith("STORE") ) {
             String[] input = line.split(" ");
@@ -68,7 +86,13 @@ public class DClientThread implements Runnable {
             loadData(input);
         }
     }
-
+    /**
+     * This method handles store commands for storing a file.
+     *
+     * @param filename File name to be stored
+     * @param filesize Size of the file to be stored
+     * @param isStore  Flag to check if the file should be stored
+     */
     private void storeCommand(String filename, String filesize, boolean isStore) {
 
         File folder = createFolder();
@@ -111,7 +135,12 @@ public class DClientThread implements Runnable {
             info.storeControllerMessageGo(filename);
         }
     }
-
+    /**
+     * This method handles data load requests from a client.
+     *
+     * @param fileName File name to load data from
+     * @throws IOException if there is an issue with the input or output stream
+     */
     private void loadData(String fileName) throws IOException {
         File folder = createFolder();
         System.out.println(
@@ -146,7 +175,11 @@ public class DClientThread implements Runnable {
 
     }
 
-
+    /**
+     * This method creates a new folder for storing files.
+     *
+     * @return File object representing the created folder
+     */
     private File createFolder() {
         String folderName = fileFolder;
         File folder = new File(System.getProperty("user.dir"), folderName);
